@@ -1,0 +1,76 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /loan-app
+
+spring:
+  application:
+    name: loan-app-api
+  profiles:
+    active: dev
+
+  # ==================== 数据源 ====================
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/loan_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 50
+      max-wait: 60000
+      validation-query: SELECT 1
+
+  # ==================== Redis ====================
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      database: 0
+
+  # ==================== Jackson ====================
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+# ==================== MyBatis-Plus ====================
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.jyfq.loan.model.entity
+  global-config:
+    db-config:
+      id-type: auto
+  configuration:
+    map-underscore-to-camel-case: true
+
+# ==================== RocketMQ ====================
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    group: loan-app-producer
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+
+# ==================== Knife4j 接口文档 ====================
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# ==================== 日志 ====================
+logging:
+  level:
+    com.jyfq.loan: info
+    com.jyfq.loan.mapper: info
+    com.baomidou: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"

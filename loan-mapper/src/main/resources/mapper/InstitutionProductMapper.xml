@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jyfq.loan.mapper.InstitutionProductMapper">
+
+    <!-- 匹配可推送产品：根据城市、年龄、金额过滤，按优先级排序 -->
+    <select id="matchProducts" resultType="com.jyfq.loan.model.entity.InstitutionProduct">
+        SELECT ip.*
+        FROM institution_product ip
+        INNER JOIN institution i ON i.id = ip.inst_id AND i.status = 1
+        WHERE ip.status = 1
+          AND ip.min_age &lt;= #{age}
+          AND ip.max_age &gt;= #{age}
+          AND ip.min_amount &lt;= #{amount}
+          AND ip.max_amount &gt;= #{amount}
+        ORDER BY ip.weight DESC, ip.priority ASC
+    </select>
+
+    <!-- 推单记录：更新推单状态 -->
+
+</mapper>
