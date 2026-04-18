@@ -1,39 +1,33 @@
-package com.jyfq.loan.model.dto;
+package com.jyfq.loan.model.vo;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.List;
+import java.time.LocalDateTime;
 
 /**
- * Institution create/update request.
+ * Institution detail view.
  */
 @Data
-public class InstitutionSaveDTO implements Serializable {
+public class InstitutionDetailVO implements Serializable {
 
-    @NotBlank(message = "merchant name is required")
+    private Long id;
+    private String instCode;
     private String instName;
-
-    @NotBlank(message = "merchant alias is required")
     private String merchantAlias;
-
-    @NotBlank(message = "merchant type is required")
     private String merchantType;
-
-    private String remark;
+    private Integer status;
+    private String statusDesc;
     private String adminPhone;
     private String adminName;
     private String adminRole;
     private Integer smsNotify;
     private Integer userStatus;
-    private Integer businessStatus;
     private Integer crmAutoAssign;
     private Integer apiMerchant;
     private String specifiedChannel;
     private String excludedChannels;
-    private List<String> cityCodes;
     private String openCities;
     private String productName;
     private String productIcon;
@@ -41,4 +35,11 @@ public class InstitutionSaveDTO implements Serializable {
     private BigDecimal productRate;
     private Integer productPeriod;
     private String productProtocol;
+    private BigDecimal accountBalance;
+    private BigDecimal rechargeTotal;
+    private String remark;
+    private LocalDateTime createdAt;
+    private String createBy;
+    private LocalDateTime updatedAt;
+    private String updateBy;
 }

@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jyfq.loan.common.exception.BizException;
 import com.jyfq.loan.common.result.PageResult;
@@ -12,7 +13,6 @@ import com.jyfq.loan.mapper.CityConfigMapper;
 import com.jyfq.loan.mapper.ChannelMapper;
 import com.jyfq.loan.mapper.InstitutionMapper;
 import com.jyfq.loan.mapper.InstitutionProductMapper;
-import com.jyfq.loan.mapper.PushRecordMapper;
 import com.jyfq.loan.model.common.QualificationConditionGroup;
 import com.jyfq.loan.model.common.QualificationRules;
 import com.jyfq.loan.model.dto.InstitutionProductQueryDTO;
@@ -23,7 +23,6 @@ import com.jyfq.loan.model.entity.Channel;
 import com.jyfq.loan.model.entity.CityConfig;
 import com.jyfq.loan.model.entity.Institution;
 import com.jyfq.loan.model.entity.InstitutionProduct;
-import com.jyfq.loan.model.entity.PushRecord;
 import com.jyfq.loan.model.vo.InstitutionProductDetailVO;
 import com.jyfq.loan.model.vo.InstitutionProductListVO;
 import com.jyfq.loan.model.vo.InstitutionProductOptionsVO;
@@ -68,8 +67,6 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
     private final CityConfigMapper cityConfigMapper;
     private final ChannelMapper channelMapper;
     private final ApplyOrderMapper applyOrderMapper;
-    private final PushRecordMapper pushRecordMapper;
-
     @Override
     public PageResult<InstitutionProductListVO> pageProducts(InstitutionProductQueryDTO query) {
         long current = query.getCurrent() == null || query.getCurrent() < 1 ? 1L : query.getCurrent();
@@ -186,6 +183,7 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
         InstitutionProduct product = new InstitutionProduct();
         fillProduct(product, request, institution, findTemplateProduct(request.getInstId(), null));
         institutionProductMapper.insert(product);
+        syncInstitutionOpenCities(product.getInstId());
         return product.getId();
     }
 
@@ -193,27 +191,34 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
     @Transactional(rollbackFor = Exception.class)
     public void updateProduct(Long id, InstitutionProductSaveDTO request) {
         InstitutionProduct existing = requireProduct(id);
-        Institution institution = requireInstitution(request.getInstId());
-        validateSaveRequest(request, institution, id);
+        InstitutionProductSaveDTO mergedRequest = mergeUpdateRequest(existing, request);
+        Institution institution = requireInstitution(mergedRequest.getInstId());
+        validateSaveRequest(mergedRequest, institution, id);
 
         InstitutionProduct updated = new InstitutionProduct();
         updated.setId(id);
-        fillProduct(updated, request, institution, existing);
+        fillProduct(updated, mergedRequest, institution, existing);
         institutionProductMapper.updateById(updated);
+        syncInstitutionOpenCities(updated.getInstId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void toggleProduct(Long id) {
+        InstitutionProduct existing = requireProduct(id);
+        InstitutionProduct updated = new InstitutionProduct();
+        updated.setId(id);
+        updated.setStatus(Integer.valueOf(STATUS_ENABLED).equals(existing.getStatus()) ? STATUS_DISABLED : STATUS_ENABLED);
+        institutionProductMapper.updateById(updated);
+        syncInstitutionOpenCities(existing.getInstId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteProduct(Long id) {
-        requireProduct(id);
-        long applyRefCount = applyOrderMapper.selectCount(new LambdaQueryWrapper<ApplyOrder>()
-                .eq(ApplyOrder::getProductId, id));
-        long pushRefCount = pushRecordMapper.selectCount(new LambdaQueryWrapper<PushRecord>()
-                .eq(PushRecord::getProductId, id));
-        if (applyRefCount > 0 || pushRefCount > 0) {
-            throw new BizException("当前产品已有历史订单或推单记录，不能删除");
-        }
+        InstitutionProduct product = requireProduct(id);
         institutionProductMapper.deleteById(id);
+        syncInstitutionOpenCities(product.getInstId());
     }
 
     @Override
@@ -249,6 +254,7 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
         copy.setExtJson(source.getExtJson());
         copy.setStatus(source.getStatus());
         institutionProductMapper.insert(copy);
+        syncInstitutionOpenCities(copy.getInstId());
         return copy.getId();
     }
 
@@ -422,6 +428,56 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
                 .filter(item -> Objects.equals(item.getId(), currentId))
                 .findFirst()
                 .orElse(products.get(0));
+    }
+
+    private InstitutionProductSaveDTO mergeUpdateRequest(InstitutionProduct existing, InstitutionProductSaveDTO request) {
+        InstitutionProductSaveDTO merged = new InstitutionProductSaveDTO();
+        QualificationConditionGroup existingRuleGroup = firstNonEmptyRuleGroup(parseQualificationRules(existing.getQualificationConfig()));
+
+        merged.setInstId(request.getInstId() == null ? existing.getInstId() : request.getInstId());
+        merged.setStatus(request.getStatus() == null ? existing.getStatus() : request.getStatus());
+        merged.setMinAge(request.getMinAge() == null ? existing.getMinAge() : request.getMinAge());
+        merged.setMaxAge(request.getMaxAge() == null ? existing.getMaxAge() : request.getMaxAge());
+        merged.setCityCodes(request.getCityCodes() == null ? parseJsonArray(existing.getCityList()) : request.getCityCodes());
+        merged.setCityNames(request.getCityNames() == null ? parseTextList(existing.getCityNames()) : request.getCityNames());
+        merged.setExcludedCityCodes(request.getExcludedCityCodes() == null ? parseJsonArray(existing.getExcludedCityCodes()) : request.getExcludedCityCodes());
+        merged.setExcludedCityNames(request.getExcludedCityNames() == null ? parseTextList(existing.getExcludedCityNames()) : request.getExcludedCityNames());
+        merged.setUnitPrice(request.getUnitPrice() == null ? existing.getUnitPrice() : request.getUnitPrice());
+        merged.setPriceRatio(request.getPriceRatio() == null ? existing.getPriceRatio() : request.getPriceRatio());
+        merged.setDailyQuota(request.getDailyQuota() == null ? existing.getDailyQuota() : request.getDailyQuota());
+        merged.setWeight(request.getWeight() == null ? existing.getWeight() : request.getWeight());
+        merged.setSpecifiedChannelCodes(request.getSpecifiedChannelCodes() == null ? parseCsv(existing.getSpecifiedChannels()) : request.getSpecifiedChannelCodes());
+        merged.setExcludedChannelCodes(request.getExcludedChannelCodes() == null ? parseCsv(existing.getExcludedChannels()) : request.getExcludedChannelCodes());
+        merged.setWorkingHours(request.getWorkingHours() == null ? parseWorkingHours(existing.getWorkingHours()) : request.getWorkingHours());
+        merged.setMinAmount(request.getMinAmount() == null ? existing.getMinAmount() : request.getMinAmount());
+        merged.setMaxAmount(request.getMaxAmount() == null ? existing.getMaxAmount() : request.getMaxAmount());
+        merged.setQualificationRules(request.getQualificationRules() == null ? parseQualificationRules(existing.getQualificationConfig()) : request.getQualificationRules());
+        merged.setProvidentFund(request.getProvidentFund() == null ? resolveBinaryValue(existingRuleGroup == null ? null : existingRuleGroup.getProvidentFund()) : request.getProvidentFund());
+        merged.setSocialSecurity(request.getSocialSecurity() == null ? resolveBinaryValue(existingRuleGroup == null ? null : existingRuleGroup.getSocialSecurity()) : request.getSocialSecurity());
+        merged.setZhimaLevel(request.getZhimaLevel() == null ? resolveZhimaLevel(existingRuleGroup == null ? null : existingRuleGroup.getZhima()) : request.getZhimaLevel());
+        merged.setCommercialInsurance(request.getCommercialInsurance() == null ? resolveBinaryValue(existingRuleGroup == null ? null : existingRuleGroup.getCommercialInsurance()) : request.getCommercialInsurance());
+        merged.setProfession(request.getProfession() == null ? resolveProfessionValue(existingRuleGroup == null ? null : existingRuleGroup.getProfession()) : request.getProfession());
+        merged.setHouse(request.getHouse() == null ? resolveBinaryValue(existingRuleGroup == null ? null : existingRuleGroup.getHouse()) : request.getHouse());
+        merged.setVehicle(request.getVehicle() == null ? resolveBinaryValue(existingRuleGroup == null ? null : existingRuleGroup.getVehicle()) : request.getVehicle());
+        merged.setOverdue(request.getOverdue() == null ? resolveOverdueValue(existingRuleGroup == null ? null : existingRuleGroup.getOverdue()) : request.getOverdue());
+        merged.setHouseholdRegister(request.getHouseholdRegister() == null ? resolveFirstOption(existingRuleGroup == null ? null : existingRuleGroup.getHouseholdRegister()) : request.getHouseholdRegister());
+        merged.setRemark(request.getRemark() == null ? existing.getRemark() : request.getRemark());
+        return merged;
+    }
+
+    private void syncInstitutionOpenCities(Long instId) {
+        List<InstitutionProduct> products = institutionProductMapper.selectList(new LambdaQueryWrapper<InstitutionProduct>()
+                .eq(InstitutionProduct::getInstId, instId)
+                .eq(InstitutionProduct::getStatus, STATUS_ENABLED)
+                .orderByAsc(InstitutionProduct::getCreatedAt)
+                .orderByAsc(InstitutionProduct::getId));
+        LinkedHashSet<String> cities = new LinkedHashSet<>();
+        for (InstitutionProduct product : products) {
+            cities.addAll(parseTextList(product.getCityNames()));
+        }
+        institutionMapper.update(null, new LambdaUpdateWrapper<Institution>()
+                .eq(Institution::getId, instId)
+                .set(Institution::getOpenCities, cities.isEmpty() ? null : String.join(",", cities)));
     }
 
     private InstitutionProductListVO toListVO(InstitutionProduct product, Institution institution) {

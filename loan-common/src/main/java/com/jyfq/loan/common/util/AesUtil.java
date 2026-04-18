@@ -85,4 +85,40 @@ public final class AesUtil {
             throw new RuntimeException("AES ECB decrypt error", e);
         }
     }
+
+    public static String encryptByTransformation(String plainText, String key, String transformation, String ivStr) {
+        try {
+            SecretKeySpec keySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), ALGORITHM);
+            Cipher cipher = Cipher.getInstance(transformation);
+            if (requiresIv(transformation)) {
+                cipher.init(Cipher.ENCRYPT_MODE, keySpec, new IvParameterSpec(ivStr.getBytes(StandardCharsets.UTF_8)));
+            } else {
+                cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+            }
+            byte[] encrypted = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(encrypted);
+        } catch (Exception e) {
+            throw new RuntimeException("AES encrypt error, transformation=" + transformation, e);
+        }
+    }
+
+    public static String decryptByTransformation(String cipherText, String key, String transformation, String ivStr) {
+        try {
+            SecretKeySpec keySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), ALGORITHM);
+            Cipher cipher = Cipher.getInstance(transformation);
+            if (requiresIv(transformation)) {
+                cipher.init(Cipher.DECRYPT_MODE, keySpec, new IvParameterSpec(ivStr.getBytes(StandardCharsets.UTF_8)));
+            } else {
+                cipher.init(Cipher.DECRYPT_MODE, keySpec);
+            }
+            byte[] decrypted = cipher.doFinal(Base64.getDecoder().decode(cipherText));
+            return new String(decrypted, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("AES decrypt error, transformation=" + transformation, e);
+        }
+    }
+
+    private static boolean requiresIv(String transformation) {
+        return transformation != null && transformation.toUpperCase().contains("/CBC/");
+    }
 }

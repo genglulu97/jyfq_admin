@@ -5,11 +5,11 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.jyfq.loan.common.exception.BizException;
 import com.jyfq.loan.common.result.ResultCode;
-import com.jyfq.loan.common.util.AesUtil;
 import com.jyfq.loan.mapper.ChannelMapper;
 import com.jyfq.loan.model.dto.StandardApplyData;
 import com.jyfq.loan.model.entity.Channel;
 import com.jyfq.loan.service.strategy.UpstreamStrategy;
+import com.jyfq.loan.service.upstream.ChannelCryptoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +21,7 @@ import org.springframework.util.StringUtils;
 public class MicroSilverUpstreamStrategy implements UpstreamStrategy {
 
     private final ChannelMapper channelMapper;
+    private final ChannelCryptoService channelCryptoService;
 
     @Override
     public String getChannelCode() {
@@ -48,7 +49,7 @@ public class MicroSilverUpstreamStrategy implements UpstreamStrategy {
         String decrypted;
         JSONObject json;
         try {
-            decrypted = AesUtil.decryptECB(rawData, channel.getAppKey());
+            decrypted = channelCryptoService.decrypt(channel, rawData);
             json = JSON.parseObject(decrypted);
         } catch (Exception e) {
             throw new BizException(ResultCode.DECRYPT_ERROR, "AES/ECB decrypt failed");
@@ -101,7 +102,7 @@ public class MicroSilverUpstreamStrategy implements UpstreamStrategy {
             throw new BizException(ResultCode.DECRYPT_ERROR, "channel appKey missing");
         }
         String jsonResult = JSON.toJSONString(result);
-        return AesUtil.encryptECB(jsonResult, channel.getAppKey());
+        return channelCryptoService.encrypt(channel, jsonResult);
     }
 
     private void validateRequiredFields(JSONObject json) {

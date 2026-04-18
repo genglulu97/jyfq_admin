@@ -33,6 +33,10 @@ public class ChannelSaveDTO implements Serializable {
     private Integer displayProductCount;
     private Integer actualPushCount;
     private String methodName;
+    private String encryptType;
+    private String cipherMode;
+    private String paddingMode;
+    private String ivValue;
 
     @NotBlank(message = "秘钥配置不能为空")
     private String appKey;

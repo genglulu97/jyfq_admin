@@ -60,6 +60,7 @@ CALL `sp_add_column_if_missing`('apply_order', 'created_at', "DATETIME NOT NULL 
 CALL `sp_add_column_if_missing`('apply_order', 'create_by', "VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT 'Created by'");
 CALL `sp_add_column_if_missing`('apply_order', 'updated_at', "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
 CALL `sp_add_column_if_missing`('apply_order', 'update_by', "VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT 'Updated by'");
+CALL `sp_add_column_if_missing`('apply_order', 'product_name_snapshot', "VARCHAR(128) DEFAULT NULL COMMENT 'Winning product name snapshot'");
 
 CALL `sp_add_column_if_missing`('push_record', 'created_at', "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
 CALL `sp_add_column_if_missing`('push_record', 'create_by', "VARCHAR(64) NOT NULL DEFAULT 'system' COMMENT 'Created by'");

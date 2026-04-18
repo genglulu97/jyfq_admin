@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -52,9 +53,9 @@ public class PushServiceImpl implements PushService {
             return PushResult.failure("Institution not found: " + product.getInstId());
         }
 
-        InstitutionAdapter adapter = adapterRegistry.getAdapter(inst.getInstCode());
+        InstitutionAdapter adapter = adapterRegistry.getAdapter(resolveAdapterKey(inst));
         if (adapter == null) {
-            return PushResult.failure("Adapter not found: " + inst.getInstCode());
+            return PushResult.failure("Adapter not found: " + resolveAdapterKey(inst));
         }
 
         String traceId = UUID.randomUUID().toString().replace("-", "");
@@ -68,7 +69,7 @@ public class PushServiceImpl implements PushService {
         pushReq.setStandardData(data);
 
         long start = System.currentTimeMillis();
-        PushResult result = adapter.push(pushReq);
+        PushResult result = adapter.push(inst, pushReq);
         long cost = System.currentTimeMillis() - start;
 
         PushRecord record = new PushRecord();
@@ -86,5 +87,12 @@ public class PushServiceImpl implements PushService {
         pushRecordMapper.insert(record);
 
         return result;
+    }
+
+    private String resolveAdapterKey(Institution institution) {
+        if (institution == null) {
+            return null;
+        }
+        return StringUtils.hasText(institution.getApiMethodName()) ? institution.getApiMethodName() : institution.getInstCode();
     }
 }

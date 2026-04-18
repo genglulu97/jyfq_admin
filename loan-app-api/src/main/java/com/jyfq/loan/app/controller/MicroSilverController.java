@@ -37,7 +37,7 @@ public class MicroSilverController {
         String data = request.getString("data");
         validateOuterRequest(orgCode, data);
 
-        log.info("[微银预检] 收到请求, 渠道号={}, 原始请求={}", orgCode, JSON.toJSONString(request));
+        log.info("[MICROSILVER] preCheck request orgCode={}, request={}", orgCode, JSON.toJSONString(request));
 
         UpstreamStrategy strategy = strategyFactory.getStrategy("microsilver");
         if (strategy == null) {
@@ -56,14 +56,7 @@ public class MicroSilverController {
         responseData.put("productName", winner.getInstCode() + "产品");
         responseData.put("companyName", winner.getInstCode());
         responseData.put("price", winner.getPrice().toPlainString());
-
-        String encrypted = strategy.encryptResponse(responseData);
-
-        JSONObject result = new JSONObject();
-        result.put("code", 0);
-        result.put("msg", "操作成功");
-        result.put("data", encrypted);
-        return R.ok(result);
+        return R.ok(responseData);
     }
 
     @Operation(summary = "正式进件")

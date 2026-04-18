@@ -2,9 +2,15 @@ package com.jyfq.loan.admin.controller;
 
 import com.jyfq.loan.common.result.PageResult;
 import com.jyfq.loan.common.result.R;
+import com.jyfq.loan.model.dto.InstitutionApiConfigUpdateDTO;
 import com.jyfq.loan.model.dto.InstitutionQueryDTO;
 import com.jyfq.loan.model.dto.InstitutionRechargeDTO;
 import com.jyfq.loan.model.dto.InstitutionSaveDTO;
+import com.jyfq.loan.model.dto.InstitutionStatusUpdateDTO;
+import com.jyfq.loan.model.vo.InstitutionApiConfigDetailVO;
+import com.jyfq.loan.model.vo.InstitutionApiConfigListVO;
+import com.jyfq.loan.model.vo.InstitutionApiConfigOptionsVO;
+import com.jyfq.loan.model.vo.InstitutionDetailVO;
 import com.jyfq.loan.model.vo.InstitutionListVO;
 import com.jyfq.loan.model.vo.InstitutionProductVO;
 import com.jyfq.loan.model.vo.InstitutionRechargeRecordVO;
@@ -42,10 +48,55 @@ public class InstitutionController {
         return R.ok(adminInstitutionService.pageInstitutions(query));
     }
 
+    @Operation(summary = "机构API配置列表")
+    @GetMapping("/api-config/list")
+    public R<PageResult<InstitutionApiConfigListVO>> apiConfigList(InstitutionQueryDTO query) {
+        return R.ok(adminInstitutionService.pageInstitutionApiConfigs(query));
+    }
+
     @Operation(summary = "新增机构")
     @PostMapping("/add")
     public R<Long> add(@Valid @RequestBody InstitutionSaveDTO request) {
         return R.ok(adminInstitutionService.createInstitution(request));
+    }
+
+    @Operation(summary = "机构详情")
+    @GetMapping("/detail/{id}")
+    public R<InstitutionDetailVO> detail(@PathVariable Long id) {
+        return R.ok(adminInstitutionService.getInstitutionDetail(id));
+    }
+
+    @Operation(summary = "机构API配置详情")
+    @GetMapping("/api-config/detail/{id}")
+    public R<InstitutionApiConfigDetailVO> apiConfigDetail(@PathVariable Long id) {
+        return R.ok(adminInstitutionService.getInstitutionApiConfigDetail(id));
+    }
+
+    @Operation(summary = "鏈烘瀯API閰嶇疆閫夐」")
+    @GetMapping("/api-config/options")
+    public R<InstitutionApiConfigOptionsVO> apiConfigOptions() {
+        return R.ok(adminInstitutionService.getInstitutionApiConfigOptions());
+    }
+
+    @Operation(summary = "修改机构")
+    @PutMapping("/update/{id}")
+    public R<?> update(@PathVariable Long id, @Valid @RequestBody InstitutionSaveDTO request) {
+        adminInstitutionService.updateInstitution(id, request);
+        return R.ok();
+    }
+
+    @Operation(summary = "修改机构API配置")
+    @PutMapping("/api-config/update/{id}")
+    public R<?> updateApiConfig(@PathVariable Long id, @Valid @RequestBody InstitutionApiConfigUpdateDTO request) {
+        adminInstitutionService.updateInstitutionApiConfig(id, request);
+        return R.ok();
+    }
+
+    @Operation(summary = "修改机构状态")
+    @PutMapping("/api-config/status/{id}")
+    public R<?> updateStatus(@PathVariable Long id, @Valid @RequestBody InstitutionStatusUpdateDTO request) {
+        adminInstitutionService.updateInstitutionStatus(id, request);
+        return R.ok();
     }
 
     @Operation(summary = "删除机构")

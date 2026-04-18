@@ -78,13 +78,13 @@ public class ApplyServiceImpl implements ApplyService {
         log.info("[APPLY] matched products, orderNo={}, products={}", order.getOrderNo(), buildMatchedProductLog(matchedProducts));
 
         if (matchedProducts.isEmpty()) {
-            updateOrderSnapshot(order.getOrderNo(), null, null, null, 9, "no matched product", null);
+            updateOrderSnapshot(order.getOrderNo(), null, null, null, null, 9, "no matched product", null);
             return PreCheckResult.builder().pass(false).rejectReason("no matched product").build();
         }
 
-        PreCheckRequest preCheckReq = createPreCheckRequest(data);
+        PreCheckRequest basePreCheckReq = createPreCheckRequest(data);
         List<CompletableFuture<PreCheckResult>> futures = matchedProducts.stream()
-                .map(product -> CompletableFuture.supplyAsync(() -> preCheckSingleProduct(order, product, preCheckReq), collisionExecutor)
+                .map(product -> CompletableFuture.supplyAsync(() -> preCheckSingleProduct(order, product, basePreCheckReq), collisionExecutor)
                         .completeOnTimeout(null, 3, TimeUnit.SECONDS))
                 .collect(Collectors.toList());
 
@@ -96,7 +96,7 @@ public class ApplyServiceImpl implements ApplyService {
                 .collect(Collectors.toList());
 
         if (results.isEmpty()) {
-            updateOrderSnapshot(order.getOrderNo(), null, null, null, 9, "all institutions rejected", null);
+            updateOrderSnapshot(order.getOrderNo(), null, null, null, null, 9, "all institutions rejected", null);
             return PreCheckResult.builder().pass(false).rejectReason("all institutions rejected").build();
         }
 
@@ -105,7 +105,12 @@ public class ApplyServiceImpl implements ApplyService {
                 .orElse(null);
 
         if (winner != null) {
-            updateOrderSnapshot(order.getOrderNo(), winner.getInstId(), winner.getProductId(), null, 0, null, winner.getPrice());
+            InstitutionProduct winnerProduct = matchedProducts.stream()
+                    .filter(product -> Objects.equals(product.getId(), winner.getProductId()))
+                    .findFirst()
+                    .orElse(null);
+            updateOrderSnapshot(order.getOrderNo(), winner.getInstId(), winner.getProductId(),
+                    winnerProduct == null ? null : winnerProduct.getProductName(), null, 0, null, winner.getPrice());
             log.info("[APPLY] winner selected, orderNo={}, instCode={}, productId={}, price={}",
                     order.getOrderNo(), winner.getInstCode(), winner.getProductId(), winner.getPrice());
         }
@@ -127,9 +132,9 @@ public class ApplyServiceImpl implements ApplyService {
             return PushResult.failure("Institution not found: " + product.getInstId());
         }
 
-        InstitutionAdapter adapter = adapterRegistry.getAdapter(inst.getInstCode());
+        InstitutionAdapter adapter = adapterRegistry.getAdapter(resolveAdapterKey(inst));
         if (adapter == null) {
-            return PushResult.failure("Adapter not found: " + inst.getInstCode());
+            return PushResult.failure("Adapter not found: " + resolveAdapterKey(inst));
         }
 
         String traceId = UUID.randomUUID().toString().replace("-", "");
@@ -143,8 +148,19 @@ public class ApplyServiceImpl implements ApplyService {
         pushReq.setNotifyUrl(inst.getApiNotifyUrl());
         pushReq.setStandardData(data);
 
+        log.info("[PUSH] dispatch productId={} productName={} instId={} instName={} instCode={} pushUrl={} notifyUrl={} orderNo={} traceId={}",
+                product.getId(),
+                product.getProductName(),
+                inst.getId(),
+                inst.getInstName(),
+                inst.getInstCode(),
+                inst.getApiPushUrl(),
+                inst.getApiNotifyUrl(),
+                orderNo,
+                traceId);
+
         long start = System.currentTimeMillis();
-        PushResult result = adapter.push(pushReq);
+        PushResult result = adapter.push(inst, pushReq);
         long cost = System.currentTimeMillis() - start;
 
         savePushExecution(orderNo, traceId, product, inst, result, (int) cost);
@@ -154,22 +170,16 @@ public class ApplyServiceImpl implements ApplyService {
     private ApplyOrder createAndSaveOrder(StandardApplyData data, Channel channel) {
         String traceId = UUID.randomUUID().toString().replace("-", "");
 
-        if (!StringUtils.hasText(data.getPhone())
-                || !StringUtils.hasText(data.getIdCard())
-                || !StringUtils.hasText(data.getName())) {
-            throw new RuntimeException("Incomplete apply data for order creation");
-        }
-
         ApplyOrder order = new ApplyOrder();
         order.setOrderNo(String.valueOf(System.currentTimeMillis()));
         order.setChannelId(channel.getId());
         order.setChannelCode(channel.getChannelCode());
         order.setTraceId(traceId);
         order.setPhoneMd5(data.getPhoneMd5());
-        order.setPhoneEnc(AesUtil.encrypt(data.getPhone(), channel.getAppKey()));
-        order.setIdCardEnc(AesUtil.encrypt(data.getIdCard(), channel.getAppKey()));
-        order.setUserName(AesUtil.encrypt(data.getName(), channel.getAppKey()));
-        order.setUserNameMd5(DigestUtil.md5Hex(data.getName()));
+        order.setPhoneEnc(AesUtil.encrypt(defaultString(data.getPhone()), channel.getAppKey()));
+        order.setIdCardEnc(AesUtil.encrypt(defaultString(data.getIdCard()), channel.getAppKey()));
+        order.setUserName(AesUtil.encrypt(defaultString(data.getName()), channel.getAppKey()));
+        order.setUserNameMd5(StringUtils.hasText(data.getName()) ? DigestUtil.md5Hex(data.getName()) : null);
         order.setAge(data.getAge());
         order.setCityCode(data.getCityCode());
         order.setWorkCity(data.getWorkCity());
@@ -193,20 +203,31 @@ public class ApplyServiceImpl implements ApplyService {
         return order;
     }
 
-    private PreCheckResult preCheckSingleProduct(ApplyOrder order, InstitutionProduct product, PreCheckRequest preCheckReq) {
+    private PreCheckResult preCheckSingleProduct(ApplyOrder order, InstitutionProduct product, PreCheckRequest basePreCheckReq) {
         try {
             Institution inst = institutionMapper.selectById(product.getInstId());
             if (inst == null) {
                 return null;
             }
 
-            InstitutionAdapter adapter = adapterRegistry.getAdapter(inst.getInstCode());
+            InstitutionAdapter adapter = adapterRegistry.getAdapter(resolveAdapterKey(inst));
             if (adapter == null) {
                 return null;
             }
 
+            PreCheckRequest preCheckReq = copyPreCheckRequest(basePreCheckReq);
+            preCheckReq.setProductId(product.getId());
+            preCheckReq.setInstCode(inst.getInstCode());
+            log.info("[APPLY] dispatch preCheck orderNo={} productId={} productName={} instId={} instName={} instCode={} preCheckUrl={}",
+                    order.getOrderNo(),
+                    product.getId(),
+                    product.getProductName(),
+                    inst.getId(),
+                    inst.getInstName(),
+                    inst.getInstCode(),
+                    inst.getPreCheckUrl());
             long start = System.currentTimeMillis();
-            PreCheckResult result = adapter.preCheck(preCheckReq);
+            PreCheckResult result = adapter.preCheck(inst, preCheckReq);
             long cost = System.currentTimeMillis() - start;
 
             if (result != null) {
@@ -256,7 +277,7 @@ public class ApplyServiceImpl implements ApplyService {
         pushRecordMapper.insert(record);
     }
 
-    private void updateOrderSnapshot(String orderNo, Long instId, Long productId, Long pushId,
+    private void updateOrderSnapshot(String orderNo, Long instId, Long productId, String productNameSnapshot, Long pushId,
                                      int status, String rejectReason, BigDecimal settlementPrice) {
         LambdaUpdateWrapper<ApplyOrder> wrapper = new LambdaUpdateWrapper<ApplyOrder>()
                 .eq(ApplyOrder::getOrderNo, orderNo)
@@ -267,6 +288,9 @@ public class ApplyServiceImpl implements ApplyService {
         }
         if (productId != null) {
             wrapper.set(ApplyOrder::getProductId, productId);
+        }
+        if (productNameSnapshot != null) {
+            wrapper.set(ApplyOrder::getProductNameSnapshot, productNameSnapshot);
         }
         if (pushId != null) {
             wrapper.set(ApplyOrder::getPushId, pushId);
@@ -289,7 +313,52 @@ public class ApplyServiceImpl implements ApplyService {
         req.setName(data.getName());
         req.setAge(data.getAge());
         req.setCityCode(data.getCityCode());
+        req.setWorkCity(data.getWorkCity());
+        req.setAmount(data.getLoanAmount());
+        req.setGender(data.getGender());
+        req.setLoanTime(data.getLoanTime());
+        req.setProfession(data.getProfession());
+        req.setZhima(data.getZhima());
+        req.setProvidentFund(data.getProvidentFund());
+        req.setSocialSecurity(data.getSocialSecurity());
+        req.setCommercialInsurance(data.getCommercialInsurance());
+        req.setHouse(data.getHouse());
+        req.setOverdue(data.getOverdue());
+        req.setVehicle(data.getVehicle());
         return req;
+    }
+
+    private PreCheckRequest copyPreCheckRequest(PreCheckRequest source) {
+        PreCheckRequest target = new PreCheckRequest();
+        target.setPhone(source.getPhone());
+        target.setIdCard(source.getIdCard());
+        target.setName(source.getName());
+        target.setPhoneMd5(source.getPhoneMd5());
+        target.setIdCardMd5(source.getIdCardMd5());
+        target.setAge(source.getAge());
+        target.setCityCode(source.getCityCode());
+        target.setWorkCity(source.getWorkCity());
+        target.setAmount(source.getAmount());
+        target.setGender(source.getGender());
+        target.setLoanTime(source.getLoanTime());
+        target.setProfession(source.getProfession());
+        target.setZhima(source.getZhima());
+        target.setProvidentFund(source.getProvidentFund());
+        target.setSocialSecurity(source.getSocialSecurity());
+        target.setCommercialInsurance(source.getCommercialInsurance());
+        target.setHouse(source.getHouse());
+        target.setOverdue(source.getOverdue());
+        target.setVehicle(source.getVehicle());
+        target.setProductId(source.getProductId());
+        target.setInstCode(source.getInstCode());
+        return target;
+    }
+
+    private String resolveAdapterKey(Institution institution) {
+        if (institution == null) {
+            return null;
+        }
+        return StringUtils.hasText(institution.getApiMethodName()) ? institution.getApiMethodName() : institution.getInstCode();
     }
 
     private String buildMatchedProductLog(List<InstitutionProduct> matchedProducts) {
@@ -318,6 +387,10 @@ public class ApplyServiceImpl implements ApplyService {
                         instCodeMap.get(product.getInstId()),
                         product.getPriority()))
                 .collect(Collectors.joining(", ", "[", "]"));
+    }
+
+    private String defaultString(String value) {
+        return StringUtils.hasText(value) ? value : "";
     }
 
     private String calculateCustomerLevel(StandardApplyData data) {

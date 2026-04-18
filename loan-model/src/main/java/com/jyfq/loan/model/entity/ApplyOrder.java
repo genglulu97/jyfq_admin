@@ -25,6 +25,7 @@ public class ApplyOrder {
     private String channelCode;
     private Long instId;
     private Long productId;
+    private String productNameSnapshot;
     private Long pushId;
     private String traceId;
     private String phoneMd5;

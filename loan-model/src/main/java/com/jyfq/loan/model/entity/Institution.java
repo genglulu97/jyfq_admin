@@ -24,6 +24,8 @@ public class Institution {
     private String instName;
     private String merchantAlias;
     private String merchantType;
+    private String businessCode;
+    private String preCheckUrl;
     private String apiPushUrl;
     private String apiNotifyUrl;
     private String appKey;

@@ -110,6 +110,10 @@ public class AdminChannelServiceImpl implements AdminChannelService {
         channel.setDisplayProductCount(defaultInt(request.getDisplayProductCount(), 1));
         channel.setActualPushCount(defaultInt(request.getActualPushCount(), 1));
         channel.setMethodName(trimToNull(request.getMethodName()));
+        channel.setEncryptType(defaultText(request.getEncryptType(), "AES"));
+        channel.setCipherMode(defaultText(request.getCipherMode(), "ECB"));
+        channel.setPaddingMode(defaultText(request.getPaddingMode(), "PKCS5Padding"));
+        channel.setIvValue(trimToNull(request.getIvValue()));
         channel.setAppKey(request.getAppKey().trim());
         channel.setIpWhitelist(trimToNull(request.getIpWhitelist()));
         channel.setCallbackUrl(trimToNull(request.getCallbackUrl()));
@@ -156,6 +160,10 @@ public class AdminChannelServiceImpl implements AdminChannelService {
         vo.setDisplayProductCount(channel.getDisplayProductCount());
         vo.setActualPushCount(channel.getActualPushCount());
         vo.setMethodName(channel.getMethodName());
+        vo.setEncryptType(channel.getEncryptType());
+        vo.setCipherMode(channel.getCipherMode());
+        vo.setPaddingMode(channel.getPaddingMode());
+        vo.setIvValue(channel.getIvValue());
         vo.setAppKey(channel.getAppKey());
         vo.setIpWhitelist(channel.getIpWhitelist());
         vo.setCallbackUrl(channel.getCallbackUrl());

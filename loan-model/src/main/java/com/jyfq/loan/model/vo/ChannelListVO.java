@@ -25,6 +25,10 @@ public class ChannelListVO implements Serializable {
     private Integer displayProductCount;
     private Integer actualPushCount;
     private String methodName;
+    private String encryptType;
+    private String cipherMode;
+    private String paddingMode;
+    private String ivValue;
     private String appKey;
     private String ipWhitelist;
     private String callbackUrl;

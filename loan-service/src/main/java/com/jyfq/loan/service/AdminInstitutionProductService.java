@@ -20,6 +20,8 @@ public interface AdminInstitutionProductService {
 
     void updateProduct(Long id, InstitutionProductSaveDTO request);
 
+    void toggleProduct(Long id);
+
     void deleteProduct(Long id);
 
     Long copyProduct(Long id);

@@ -58,8 +58,15 @@ public class InstitutionProductController {
 
     @Operation(summary = "更新机构产品")
     @PutMapping("/update/{id}")
-    public R<?> update(@PathVariable Long id, @Valid @RequestBody InstitutionProductSaveDTO request) {
+    public R<?> update(@PathVariable Long id, @RequestBody InstitutionProductSaveDTO request) {
         adminInstitutionProductService.updateProduct(id, request);
+        return R.ok();
+    }
+
+    @Operation(summary = "鍚仠鍒囨崲鏈烘瀯浜у搧")
+    @PutMapping("/toggle/{id}")
+    public R<?> toggle(@PathVariable Long id) {
+        adminInstitutionProductService.toggleProduct(id);
         return R.ok();
     }
 

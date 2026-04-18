@@ -229,6 +229,16 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         return latestPushMap;
     }
 
+    private String resolveProductSnapshot(ApplyOrder order, InstitutionProduct product, PushRecord latestPushRecord) {
+        if (StringUtils.hasText(order.getProductNameSnapshot())) {
+            return order.getProductNameSnapshot();
+        }
+        if (product != null && StringUtils.hasText(product.getProductName())) {
+            return product.getProductName();
+        }
+        return latestPushRecord == null ? null : latestPushRecord.getInstCode();
+    }
+
     private OrderListVO toOrderListVO(ApplyOrder order, Channel channel,
                                       InstitutionProduct product, PushRecord latestPushRecord) {
         OrderListVO vo = new OrderListVO();
@@ -239,7 +249,7 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         vo.setChannelCode(order.getChannelCode());
         vo.setChannelName(channel == null ? order.getChannelCode() : channel.getChannelName());
         vo.setCityName(resolveCityName(order));
-        vo.setMerchantAlias(product == null ? null : product.getProductName());
+        vo.setMerchantAlias(resolveProductSnapshot(order, product, latestPushRecord));
         vo.setLoanAmount(order.getLoanAmount());
         vo.setLoanAmountRange(formatLoanAmountRange(order.getLoanAmount()));
         vo.setCustomerLevel(resolveCustomerLevel(order));
@@ -285,7 +295,7 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         vo.setCustomerLevel(resolveCustomerLevel(order));
         vo.setSettlementPrice(order.getSettlementPrice());
         vo.setMerchantName(institution == null ? null : institution.getInstName());
-        vo.setMerchantAlias(product == null ? null : product.getProductName());
+        vo.setMerchantAlias(resolveProductSnapshot(order, product, latestPushRecord));
         vo.setPushStatusDesc(latestPushRecord == null ? "-" : resolvePushStatusDesc(latestPushRecord.getPushStatus()));
         vo.setOrderStatusDesc(resolveOrderStatusDesc(order.getOrderStatus()));
         vo.setFollowSalesman(StringUtils.hasText(order.getFollowSalesman()) ? order.getFollowSalesman() : "-");
