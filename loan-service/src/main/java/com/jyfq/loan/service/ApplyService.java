@@ -1,6 +1,8 @@
 package com.jyfq.loan.service;
 
 import com.jyfq.loan.model.dto.StandardApplyData;
+import com.jyfq.loan.model.entity.ApplyOrder;
+import com.jyfq.loan.model.entity.CollisionRecord;
 import com.jyfq.loan.thirdparty.model.PreCheckResult;
 import com.jyfq.loan.thirdparty.model.PushResult;
 
@@ -18,6 +20,14 @@ public interface ApplyService {
     PreCheckResult competitivePreCheck(StandardApplyData data);
 
     /**
+     * Find the latest pre-check-passed local order for this applicant.
+     *
+     * @param data standardized application data
+     * @return latest matched local order, null if none
+     */
+    CollisionRecord findLatestMatchedCollisionRecord(StandardApplyData data);
+
+    /**
      * 正式进件：将数据推送到指定的机构
      *
      * @param data    标准化用户数据
@@ -25,4 +35,14 @@ public interface ApplyService {
      * @return 进件结果
      */
     PushResult pushToInstitution(StandardApplyData data, Long productId);
+
+    /**
+     * Push application data to the specified institution using an existing local order when available.
+     *
+     * @param data         standardized application data
+     * @param productId    target product id
+     * @param localOrderNo existing local order number generated during pre-check, nullable
+     * @return push result
+     */
+    PushResult pushToInstitution(StandardApplyData data, Long productId, String localOrderNo);
 }

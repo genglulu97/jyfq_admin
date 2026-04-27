@@ -23,7 +23,13 @@ public class InstitutionApiConfigDetailVO implements Serializable {
     private String apiNotifyUrl;
     private String appKey;
     private String encryptType;
+    private String cipherMode;
+    private String paddingMode;
+    private String ivValue;
     private String notifyEncryptType;
+    private String notifyCipherMode;
+    private String notifyPaddingMode;
+    private String notifyIvValue;
     private Integer timeoutMs;
     private Integer status;
     private String statusDesc;

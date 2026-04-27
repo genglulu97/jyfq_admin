@@ -13,6 +13,7 @@ import okhttp3.Response;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -48,7 +49,7 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
                     .post(RequestBody.create(encryptedBody, JSON_MEDIA))
                     .build();
 
-            try (Response response = HTTP_CLIENT.newCall(request).execute()) {
+            try (Response response = resolveHttpClient(institution).newCall(request).execute()) {
                 String rawResp = response.body() != null ? response.body().string() : "";
                 String decrypted = decrypt(institution, rawResp);
                 long costMs = System.currentTimeMillis() - startMs;
@@ -84,7 +85,7 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
                     .post(RequestBody.create(requestJson, JSON_MEDIA))
                     .build();
 
-            try (Response response = HTTP_CLIENT.newCall(request).execute()) {
+            try (Response response = resolveHttpClient(institution).newCall(request).execute()) {
                 String rawResp = response.body() != null ? response.body().string() : "";
                 long costMs = System.currentTimeMillis() - startMs;
                 log.info("[PUSH] 下游明文请求成功 | 适配器={} | 机构编码={} | 请求地址={} | 耗时={}ms | 原始响应={}",
@@ -103,12 +104,15 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
         if (institution == null || !StringUtils.hasText(institution.getEncryptType()) || !StringUtils.hasText(institution.getAppKey())) {
             return plainText;
         }
-        String encryptType = institution.getEncryptType().trim().toUpperCase();
-        return switch (encryptType) {
-            case "AES", "AES_CBC", "CBC" -> AesUtil.encrypt(plainText, institution.getAppKey());
-            case "AES_ECB", "ECB" -> AesUtil.encryptECB(plainText, institution.getAppKey());
-            default -> plainText;
-        };
+        String encryptType = normalizeEncryptType(institution.getEncryptType());
+        if ("PLAIN".equals(encryptType)) {
+            return plainText;
+        }
+        return AesUtil.encryptByTransformation(
+                plainText,
+                institution.getAppKey(),
+                buildTransformation(encryptType, institution.getCipherMode(), institution.getPaddingMode()),
+                resolveIv(institution.getIvValue(), institution.getAppKey()));
     }
 
     protected String decrypt(Institution institution, String cipherText) {
@@ -118,17 +122,97 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
         if (institution == null || !StringUtils.hasText(institution.getEncryptType()) || !StringUtils.hasText(institution.getAppKey())) {
             return cipherText;
         }
-        String encryptType = institution.getEncryptType().trim().toUpperCase();
+        String encryptType = normalizeEncryptType(institution.getEncryptType());
         try {
-            return switch (encryptType) {
-                case "AES", "AES_CBC", "CBC" -> AesUtil.decrypt(cipherText, institution.getAppKey());
-                case "AES_ECB", "ECB" -> AesUtil.decryptECB(cipherText, institution.getAppKey());
-                default -> cipherText;
-            };
+            if ("PLAIN".equals(encryptType)) {
+                return cipherText;
+            }
+            return AesUtil.decryptByTransformation(
+                    cipherText,
+                    institution.getAppKey(),
+                    buildTransformation(encryptType, institution.getCipherMode(), institution.getPaddingMode()),
+                    resolveIv(institution.getIvValue(), institution.getAppKey()));
         } catch (RuntimeException ex) {
             log.warn("[PUSH] decrypt fallback to raw response, instCode={}",
                     institution == null ? null : institution.getInstCode(), ex);
             return cipherText;
         }
+    }
+
+    protected String decryptNotify(Institution institution, String cipherText) {
+        if (!StringUtils.hasText(cipherText)) {
+            return cipherText;
+        }
+        if (institution == null || !StringUtils.hasText(institution.getNotifyEncryptType()) || !StringUtils.hasText(institution.getAppKey())) {
+            return cipherText;
+        }
+        String encryptType = normalizeEncryptType(institution.getNotifyEncryptType());
+        try {
+            if ("PLAIN".equals(encryptType)) {
+                return cipherText;
+            }
+            return AesUtil.decryptByTransformation(
+                    cipherText,
+                    institution.getAppKey(),
+                    buildTransformation(encryptType, institution.getNotifyCipherMode(), institution.getNotifyPaddingMode()),
+                    resolveIv(institution.getNotifyIvValue(), institution.getAppKey()));
+        } catch (RuntimeException ex) {
+            log.warn("[NOTIFY] decrypt fallback to raw body, instCode={}",
+                    institution == null ? null : institution.getInstCode(), ex);
+            return cipherText;
+        }
+    }
+
+    protected String describeEncryptConfig(String encryptType, String cipherMode, String paddingMode) {
+        String normalizedType = normalizeEncryptType(encryptType);
+        if ("PLAIN".equals(normalizedType)) {
+            return "PLAIN";
+        }
+        return buildTransformation(normalizedType, cipherMode, paddingMode);
+    }
+
+    private String normalizeEncryptType(String encryptType) {
+        return StringUtils.hasText(encryptType) ? encryptType.trim().toUpperCase(Locale.ROOT) : "PLAIN";
+    }
+
+    private String buildTransformation(String encryptType, String cipherMode, String paddingMode) {
+        if ("PLAIN".equals(encryptType)) {
+            return "PLAIN";
+        }
+        String normalizedType = switch (encryptType) {
+            case "AES_ECB", "AES_CBC", "CBC", "ECB" -> "AES";
+            default -> encryptType;
+        };
+        String mode = StringUtils.hasText(cipherMode)
+                ? cipherMode.trim().toUpperCase(Locale.ROOT)
+                : defaultCipherMode(encryptType);
+        String padding = StringUtils.hasText(paddingMode) ? paddingMode.trim() : "PKCS5Padding";
+        return normalizedType + "/" + mode + "/" + padding;
+    }
+
+    private String defaultCipherMode(String encryptType) {
+        return switch (encryptType) {
+            case "AES_ECB", "ECB" -> "ECB";
+            case "AES", "AES_CBC", "CBC" -> "CBC";
+            default -> "ECB";
+        };
+    }
+
+    private String resolveIv(String ivValue, String appKey) {
+        if (StringUtils.hasText(ivValue)) {
+            return ivValue.trim();
+        }
+        return StringUtils.hasText(appKey) && appKey.length() >= 16 ? appKey.substring(0, 16) : appKey;
+    }
+
+    private OkHttpClient resolveHttpClient(Institution institution) {
+        int timeoutMs = institution != null && institution.getTimeoutMs() != null && institution.getTimeoutMs() > 0
+                ? institution.getTimeoutMs()
+                : 3000;
+        return HTTP_CLIENT.newBuilder()
+                .connectTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .writeTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .build();
     }
 }

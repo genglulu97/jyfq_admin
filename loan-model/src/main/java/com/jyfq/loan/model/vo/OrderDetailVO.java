@@ -44,9 +44,15 @@ public class OrderDetailVO implements Serializable {
     private String loanAmountRange;
     private String customerLevel;
     private BigDecimal settlementPrice;
+    private String instCode;
+    private String instName;
+    private String productName;
+    private String thirdOrderNo;
     private String merchantName;
     private String merchantAlias;
+    private Integer pushStatus;
     private String pushStatusDesc;
+    private String applyStatusDesc;
     private String orderStatusDesc;
     private String followSalesman;
     private Integer salesmanRating;

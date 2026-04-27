@@ -2,7 +2,6 @@ package com.jyfq.loan.thirdparty.impl;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.jyfq.loan.common.util.AesUtil;
 import com.jyfq.loan.model.entity.Institution;
 import com.jyfq.loan.thirdparty.AbstractInstitutionAdapter;
 import com.jyfq.loan.thirdparty.model.PreCheckRequest;
@@ -17,7 +16,7 @@ import java.math.BigDecimal;
 
 /**
  * Config-driven downstream adapter implementation.
- * Protocol: top-level JSON with orgId + data, where data uses AES/ECB/PKCS5Padding.
+ * Protocol: top-level JSON with orgId + data, where data encryption follows institution encryptType.
  */
 @Slf4j
 @Service("qlqMaskApiPushService")
@@ -79,13 +78,14 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
             logWrappedRequest(institution, institution.getApiPushUrl(), plainPayload, envelope);
 
             JSONObject resp = doPlainPost(institution, institution.getApiPushUrl(), envelope, JSONObject.class);
+            JSONObject resultData = resolveResultData(resp);
             if (isSuccess(resp)) {
-                PushResult result = PushResult.success(resolveText(resolveResultData(resp), resp, "msg", "message"));
+                PushResult result = PushResult.success(resolvePushMessage(resultData, resp));
                 result.setInstCode(institution.getInstCode());
-                result.setThirdOrderNo(resolveText(resolveResultData(resp), resp, "thirdOrderNo", "orderNo", "applyNo"));
+                result.setThirdOrderNo(resolveText(resultData, resp, "thirdOrderNo", "orderNo", "applyNo"));
                 return result;
             }
-            PushResult result = PushResult.failure(resolveText(resolveResultData(resp), resp, "msg", "message", "errorMsg"));
+            PushResult result = PushResult.failure(resolvePushMessage(resultData, resp));
             result.setInstCode(institution.getInstCode());
             return result;
         } catch (Exception e) {
@@ -124,7 +124,7 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
         payload.put("productId", req.getProductId());
         payload.put("orderId", req.getOrderId());
         if (req.getStandardData() != null) {
-            payload.put("mobile", req.getStandardData().getPhone());
+            payload.put("phone", req.getStandardData().getPhone());
             payload.put("phoneMd5", normalizePhoneMd5(req.getStandardData().getPhoneMd5(), req.getStandardData().getPhone()));
             payload.put("name", req.getStandardData().getName());
             payload.put("idCard", req.getStandardData().getIdCard());
@@ -161,10 +161,11 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
     }
 
     private void logWrappedRequest(Institution institution, String url, JSONObject plainPayload, JSONObject envelope) {
-        log.info("[PUSH] 下游请求准备 | 适配器={} | 机构编码={} | 请求地址={} | 加密方式=AES/ECB/PKCS5Padding | 加密Key={} | 未加密请求JSON={} | 撞库请求加密JSON={} | 完整下游加密请求JSON={}",
+        log.info("[PUSH] downstream request prepared | adapter={} | instCode={} | url={} | encryptType={} | key={} | plainJson={} | encryptedData={} | envelope={}",
                 getAdapterKey(),
                 institution == null ? null : institution.getInstCode(),
                 url,
+                resolveEncryptTypeLabel(institution),
                 institution == null ? null : institution.getAppKey(),
                 JSON.toJSONString(plainPayload),
                 envelope.getString("data"),
@@ -176,7 +177,17 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
         if (!StringUtils.hasText(appKey)) {
             return plainJson;
         }
-        return AesUtil.encryptECB(plainJson, appKey);
+        return encrypt(institution, plainJson);
+    }
+
+    private String resolveEncryptTypeLabel(Institution institution) {
+        if (institution == null) {
+            return "PLAIN";
+        }
+        return describeEncryptConfig(
+                institution.getEncryptType(),
+                institution.getCipherMode(),
+                institution.getPaddingMode());
     }
 
     private String resolveOrgId(Institution institution) {
@@ -344,8 +355,18 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
         if (resp == null) {
             return null;
         }
-        JSONObject data = resp.getJSONObject("data");
-        return data != null ? data : resp;
+        Object data = resp.get("data");
+        if (data instanceof JSONObject dataObject) {
+            return dataObject;
+        }
+        return resp;
+    }
+
+    private String resolvePushMessage(JSONObject data, JSONObject resp) {
+        if (resp != null && resp.get("data") instanceof String dataText && StringUtils.hasText(dataText)) {
+            return dataText;
+        }
+        return resolveText(data, resp, "msg", "message", "errorMsg");
     }
 
     private BigDecimal resolvePrice(JSONObject data, JSONObject resp) {

@@ -13,5 +13,9 @@ public class InstitutionApiConfigOptionsVO implements Serializable {
 
     private List<OptionVO> beanOptions;
     private List<OptionVO> encryptTypeOptions;
+    private List<OptionVO> cipherModeOptions;
+    private List<OptionVO> paddingModeOptions;
     private List<OptionVO> notifyEncryptTypeOptions;
+    private List<OptionVO> notifyCipherModeOptions;
+    private List<OptionVO> notifyPaddingModeOptions;
 }

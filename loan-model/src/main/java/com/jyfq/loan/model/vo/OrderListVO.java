@@ -5,6 +5,7 @@ import com.jyfq.loan.common.desensitize.DesensitizeType;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -23,13 +24,22 @@ public class OrderListVO implements Serializable {
     private String channelCode;
     private String channelName;
     private String cityName;
+    private String instCode;
+    private String instName;
+    private String productName;
     private String merchantAlias;
     private Integer loanAmount;
     private String loanAmountRange;
     private String customerLevel;
     private Integer orderStatus;
     private String orderStatusDesc;
+    private String applyStatusDesc;
+    private Integer pushStatus;
+    private String pushStatusDesc;
+    private String thirdOrderNo;
+    private BigDecimal settlementPrice;
     private String followSalesman;
+    private LocalDateTime applyTime;
     private LocalDateTime createdAt;
     private String createBy;
     private LocalDateTime updatedAt;

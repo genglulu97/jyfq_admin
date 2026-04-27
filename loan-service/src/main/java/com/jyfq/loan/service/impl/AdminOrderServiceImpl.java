@@ -17,8 +17,6 @@ import com.jyfq.loan.model.entity.Channel;
 import com.jyfq.loan.model.entity.Institution;
 import com.jyfq.loan.model.entity.InstitutionProduct;
 import com.jyfq.loan.model.entity.PushRecord;
-import com.jyfq.loan.model.enums.OrderStatus;
-import com.jyfq.loan.model.enums.PushStatus;
 import com.jyfq.loan.model.vo.OrderDetailVO;
 import com.jyfq.loan.model.vo.OrderListVO;
 import com.jyfq.loan.model.vo.OrderPushRecordVO;
@@ -67,12 +65,17 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         }
 
         Map<Long, Channel> channelMap = buildChannelMap(page.getRecords());
+        Map<Long, Institution> institutionMap = buildInstitutionMap(page.getRecords().stream()
+                .map(ApplyOrder::getInstId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList()));
         Map<Long, InstitutionProduct> productMap = buildProductMap(page.getRecords());
         Map<String, PushRecord> latestPushRecordMap = buildLatestPushRecordMap(
                 page.getRecords().stream().map(ApplyOrder::getOrderNo).collect(Collectors.toList()));
 
         List<OrderListVO> records = page.getRecords().stream()
                 .map(order -> toOrderListVO(order, channelMap.get(order.getChannelId()),
+                        institutionMap.get(order.getInstId()),
                         productMap.get(order.getProductId()), latestPushRecordMap.get(order.getOrderNo())))
                 .collect(Collectors.toList());
 
@@ -157,8 +160,18 @@ public class AdminOrderServiceImpl implements AdminOrderService {
                     .or()
                     .like(ApplyOrder::getWorkCity, cityKeyword));
         }
+
+        wrapper.isNotNull(ApplyOrder::getInstId)
+                .isNotNull(ApplyOrder::getProductId)
+                .isNotNull(ApplyOrder::getPushId);
         if (query.getOrderStatus() != null) {
-            wrapper.eq(ApplyOrder::getOrderStatus, query.getOrderStatus());
+            if (Objects.equals(query.getOrderStatus(), 9)) {
+                wrapper.isNull(ApplyOrder::getId);
+            } else {
+                wrapper.eq(ApplyOrder::getOrderStatus, query.getOrderStatus());
+            }
+        } else {
+            wrapper.in(ApplyOrder::getOrderStatus, 1, 2, 3);
         }
         if (query.getStartTime() != null) {
             wrapper.ge(ApplyOrder::getCreatedAt, query.getStartTime());
@@ -167,15 +180,35 @@ public class AdminOrderServiceImpl implements AdminOrderService {
             wrapper.le(ApplyOrder::getCreatedAt, query.getEndTime());
         }
         if (StringUtils.hasText(query.getMerchantAlias())) {
+            String keyword = query.getMerchantAlias().trim();
+            List<Long> instIds = institutionMapper.selectList(new LambdaQueryWrapper<Institution>()
+                            .and(w -> w.like(Institution::getMerchantAlias, keyword)
+                                    .or()
+                                    .like(Institution::getInstName, keyword)))
+                    .stream()
+                    .map(Institution::getId)
+                    .collect(Collectors.toList());
             List<Long> productIds = institutionProductMapper.selectList(new LambdaQueryWrapper<InstitutionProduct>()
-                            .like(InstitutionProduct::getProductName, query.getMerchantAlias().trim()))
+                            .like(InstitutionProduct::getProductName, keyword))
                     .stream()
                     .map(InstitutionProduct::getId)
                     .collect(Collectors.toList());
-            if (productIds.isEmpty()) {
+            if (instIds.isEmpty() && productIds.isEmpty()) {
                 wrapper.isNull(ApplyOrder::getId);
             } else {
-                wrapper.in(ApplyOrder::getProductId, productIds);
+                wrapper.and(w -> {
+                    boolean hasCondition = false;
+                    if (!instIds.isEmpty()) {
+                        w.in(ApplyOrder::getInstId, instIds);
+                        hasCondition = true;
+                    }
+                    if (!productIds.isEmpty()) {
+                        if (hasCondition) {
+                            w.or();
+                        }
+                        w.in(ApplyOrder::getProductId, productIds);
+                    }
+                });
             }
         }
 
@@ -229,18 +262,32 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         return latestPushMap;
     }
 
-    private String resolveProductSnapshot(ApplyOrder order, InstitutionProduct product, PushRecord latestPushRecord) {
-        if (StringUtils.hasText(order.getProductNameSnapshot())) {
-            return order.getProductNameSnapshot();
+    private String resolveMerchantAlias(ApplyOrder order, Institution institution,
+                                        InstitutionProduct product, PushRecord latestPushRecord) {
+        if (institution != null && StringUtils.hasText(institution.getMerchantAlias())) {
+            return institution.getMerchantAlias();
+        }
+        if (institution != null && StringUtils.hasText(institution.getInstName())) {
+            return institution.getInstName();
         }
         if (product != null && StringUtils.hasText(product.getProductName())) {
             return product.getProductName();
         }
+        if (StringUtils.hasText(order.getProductNameSnapshot())) {
+            return order.getProductNameSnapshot();
+        }
         return latestPushRecord == null ? null : latestPushRecord.getInstCode();
     }
 
+    private String resolveProductName(ApplyOrder order, InstitutionProduct product) {
+        if (product != null && StringUtils.hasText(product.getProductName())) {
+            return product.getProductName();
+        }
+        return order.getProductNameSnapshot();
+    }
+
     private OrderListVO toOrderListVO(ApplyOrder order, Channel channel,
-                                      InstitutionProduct product, PushRecord latestPushRecord) {
+                                      Institution institution, InstitutionProduct product, PushRecord latestPushRecord) {
         OrderListVO vo = new OrderListVO();
         vo.setId(order.getId());
         vo.setOrderNo(order.getOrderNo());
@@ -249,20 +296,26 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         vo.setChannelCode(order.getChannelCode());
         vo.setChannelName(channel == null ? order.getChannelCode() : channel.getChannelName());
         vo.setCityName(resolveCityName(order));
-        vo.setMerchantAlias(resolveProductSnapshot(order, product, latestPushRecord));
+        vo.setInstCode(institution == null ? (latestPushRecord == null ? null : latestPushRecord.getInstCode()) : institution.getInstCode());
+        vo.setInstName(institution == null ? null : institution.getInstName());
+        vo.setProductName(resolveProductName(order, product));
+        vo.setMerchantAlias(resolveMerchantAlias(order, institution, product, latestPushRecord));
         vo.setLoanAmount(order.getLoanAmount());
         vo.setLoanAmountRange(formatLoanAmountRange(order.getLoanAmount()));
         vo.setCustomerLevel(resolveCustomerLevel(order));
         vo.setOrderStatus(order.getOrderStatus());
         vo.setOrderStatusDesc(resolveOrderStatusDesc(order.getOrderStatus()));
+        vo.setApplyStatusDesc(resolveApplyStatusDesc(order.getOrderStatus()));
+        vo.setPushStatus(latestPushRecord == null ? null : latestPushRecord.getPushStatus());
+        vo.setPushStatusDesc(latestPushRecord == null ? "-" : resolvePushStatusDesc(latestPushRecord.getPushStatus()));
+        vo.setThirdOrderNo(latestPushRecord == null ? null : latestPushRecord.getThirdOrderNo());
+        vo.setSettlementPrice(order.getSettlementPrice());
         vo.setFollowSalesman(StringUtils.hasText(order.getFollowSalesman()) ? order.getFollowSalesman() : "-");
+        vo.setApplyTime(order.getCreatedAt());
         vo.setCreatedAt(order.getCreatedAt());
         vo.setCreateBy(order.getCreateBy());
         vo.setUpdatedAt(order.getUpdatedAt());
         vo.setUpdateBy(order.getUpdateBy());
-        if (latestPushRecord != null && !StringUtils.hasText(vo.getMerchantAlias())) {
-            vo.setMerchantAlias(latestPushRecord.getInstCode());
-        }
         return vo;
     }
 
@@ -294,9 +347,15 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         vo.setLoanAmountRange(formatLoanAmountRange(order.getLoanAmount()));
         vo.setCustomerLevel(resolveCustomerLevel(order));
         vo.setSettlementPrice(order.getSettlementPrice());
+        vo.setInstCode(institution == null ? (latestPushRecord == null ? null : latestPushRecord.getInstCode()) : institution.getInstCode());
+        vo.setInstName(institution == null ? null : institution.getInstName());
+        vo.setProductName(resolveProductName(order, product));
+        vo.setThirdOrderNo(latestPushRecord == null ? null : latestPushRecord.getThirdOrderNo());
         vo.setMerchantName(institution == null ? null : institution.getInstName());
-        vo.setMerchantAlias(resolveProductSnapshot(order, product, latestPushRecord));
+        vo.setMerchantAlias(resolveMerchantAlias(order, institution, product, latestPushRecord));
+        vo.setPushStatus(latestPushRecord == null ? null : latestPushRecord.getPushStatus());
         vo.setPushStatusDesc(latestPushRecord == null ? "-" : resolvePushStatusDesc(latestPushRecord.getPushStatus()));
+        vo.setApplyStatusDesc(resolveApplyStatusDesc(order.getOrderStatus()));
         vo.setOrderStatusDesc(resolveOrderStatusDesc(order.getOrderStatus()));
         vo.setFollowSalesman(StringUtils.hasText(order.getFollowSalesman()) ? order.getFollowSalesman() : "-");
         vo.setSalesmanRating(order.getSalesmanRating());
@@ -344,22 +403,33 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         if (orderStatus == null) {
             return "-";
         }
-        try {
-            return OrderStatus.of(orderStatus).getDesc();
-        } catch (Exception ex) {
-            return String.valueOf(orderStatus);
-        }
+        return switch (orderStatus) {
+            case 0 -> "\u5f85\u8fdb\u4ef6";
+            case 1 -> "\u8fdb\u4ef6\u6210\u529f";
+            case 2 -> "\u6388\u4fe1\u4e2d";
+            case 3 -> "\u5df2\u653e\u6b3e";
+            case 9 -> "\u8fdb\u4ef6\u5931\u8d25";
+            default -> String.valueOf(orderStatus);
+        };
+    }
+
+    private String resolveApplyStatusDesc(Integer orderStatus) {
+        return resolveOrderStatusDesc(orderStatus);
     }
 
     private String resolvePushStatusDesc(Integer pushStatus) {
         if (pushStatus == null) {
             return "-";
         }
-        try {
-            return PushStatus.of(pushStatus).getDesc();
-        } catch (Exception ex) {
-            return String.valueOf(pushStatus);
-        }
+        return switch (pushStatus) {
+            case 0 -> "\u5f85\u63a8\u9001";
+            case 1 -> "\u63a8\u9001\u4e2d";
+            case 2 -> "\u8fdb\u4ef6\u6210\u529f";
+            case 3 -> "\u6388\u4fe1\u901a\u8fc7";
+            case 4 -> "\u8fdb\u4ef6\u62d2\u7edd";
+            case 9 -> "\u8d85\u65f6";
+            default -> String.valueOf(pushStatus);
+        };
     }
 
     private String resolveCustomerLevel(ApplyOrder order) {

@@ -15,4 +15,11 @@ public interface DeductionService {
      * @param status   触发扣费的状态（授信通过/放款成功）
      */
     void createDeduction(String orderNo, String instCode, NotifyStatus status);
+
+    /**
+     * Create institution deduction after downstream apply succeeds.
+     *
+     * @param orderNo local business order number
+     */
+    void createPushSuccessDeduction(String orderNo);
 }

@@ -2,21 +2,26 @@ package com.jyfq.loan.service.impl;
 
 import cn.hutool.crypto.digest.DigestUtil;
 import com.alibaba.fastjson2.JSON;
+import com.jyfq.loan.mapper.CollisionRecordMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.jyfq.loan.common.util.AesUtil;
 import com.jyfq.loan.mapper.ApplyOrderMapper;
 import com.jyfq.loan.mapper.ChannelMapper;
+import com.jyfq.loan.mapper.InstitutionCustomerMapper;
 import com.jyfq.loan.mapper.InstitutionMapper;
 import com.jyfq.loan.mapper.InstitutionProductMapper;
 import com.jyfq.loan.mapper.PushRecordMapper;
 import com.jyfq.loan.model.dto.StandardApplyData;
 import com.jyfq.loan.model.entity.ApplyOrder;
 import com.jyfq.loan.model.entity.Channel;
+import com.jyfq.loan.model.entity.CollisionRecord;
+import com.jyfq.loan.model.entity.InstitutionCustomer;
 import com.jyfq.loan.model.entity.Institution;
 import com.jyfq.loan.model.entity.InstitutionProduct;
 import com.jyfq.loan.model.entity.PushRecord;
 import com.jyfq.loan.service.ApplyService;
+import com.jyfq.loan.service.DeductionService;
 import com.jyfq.loan.service.MatchService;
 import com.jyfq.loan.thirdparty.InstitutionAdapter;
 import com.jyfq.loan.thirdparty.InstitutionAdapterRegistry;
@@ -55,9 +60,12 @@ public class ApplyServiceImpl implements ApplyService {
     private final InstitutionAdapterRegistry adapterRegistry;
     private final InstitutionMapper institutionMapper;
     private final ApplyOrderMapper applyOrderMapper;
+    private final CollisionRecordMapper collisionRecordMapper;
     private final ChannelMapper channelMapper;
     private final PushRecordMapper pushRecordMapper;
     private final InstitutionProductMapper institutionProductMapper;
+    private final InstitutionCustomerMapper institutionCustomerMapper;
+    private final DeductionService deductionService;
 
     @Qualifier("collisionExecutor")
     private final Executor collisionExecutor;
@@ -73,19 +81,19 @@ public class ApplyServiceImpl implements ApplyService {
             throw new RuntimeException("Channel not found: " + data.getChannelCode());
         }
 
-        ApplyOrder order = createAndSaveOrder(data, channel);
+        CollisionRecord record = createAndSaveCollisionRecord(data, channel);
         List<InstitutionProduct> matchedProducts = matchService.findMatchedProducts(data);
-        log.info("[APPLY] matched products, orderNo={}, products={}", order.getOrderNo(), buildMatchedProductLog(matchedProducts));
+        log.info("[APPLY] matched products, collisionNo={}, products={}", record.getCollisionNo(), buildMatchedProductLog(matchedProducts));
 
         if (matchedProducts.isEmpty()) {
-            updateOrderSnapshot(order.getOrderNo(), null, null, null, null, 9, "no matched product", null);
+            updateCollisionSnapshot(record.getCollisionNo(), null, null, null, 9, "no matched product", null);
             return PreCheckResult.builder().pass(false).rejectReason("no matched product").build();
         }
 
         PreCheckRequest basePreCheckReq = createPreCheckRequest(data);
         List<CompletableFuture<PreCheckResult>> futures = matchedProducts.stream()
-                .map(product -> CompletableFuture.supplyAsync(() -> preCheckSingleProduct(order, product, basePreCheckReq), collisionExecutor)
-                        .completeOnTimeout(null, 3, TimeUnit.SECONDS))
+                .map(product -> CompletableFuture.supplyAsync(() -> preCheckSingleProduct(record, product, basePreCheckReq), collisionExecutor)
+                        .completeOnTimeout((PreCheckResult) null, resolveInstitutionTimeoutMs(product), TimeUnit.MILLISECONDS))
                 .collect(Collectors.toList());
 
         List<PreCheckResult> results = futures.stream()
@@ -96,7 +104,7 @@ public class ApplyServiceImpl implements ApplyService {
                 .collect(Collectors.toList());
 
         if (results.isEmpty()) {
-            updateOrderSnapshot(order.getOrderNo(), null, null, null, null, 9, "all institutions rejected", null);
+            updateCollisionSnapshot(record.getCollisionNo(), null, null, null, 9, "all institutions rejected", null);
             return PreCheckResult.builder().pass(false).rejectReason("all institutions rejected").build();
         }
 
@@ -109,17 +117,39 @@ public class ApplyServiceImpl implements ApplyService {
                     .filter(product -> Objects.equals(product.getId(), winner.getProductId()))
                     .findFirst()
                     .orElse(null);
-            updateOrderSnapshot(order.getOrderNo(), winner.getInstId(), winner.getProductId(),
-                    winnerProduct == null ? null : winnerProduct.getProductName(), null, 0, null, winner.getPrice());
-            log.info("[APPLY] winner selected, orderNo={}, instCode={}, productId={}, price={}",
-                    order.getOrderNo(), winner.getInstCode(), winner.getProductId(), winner.getPrice());
+            updateCollisionSnapshot(record.getCollisionNo(), winner.getInstId(), winner.getProductId(),
+                    winnerProduct == null ? null : winnerProduct.getProductName(), 0, null, winner.getPrice());
+            log.info("[APPLY] winner selected, collisionNo={}, instCode={}, productId={}, price={}",
+                    record.getCollisionNo(), winner.getInstCode(), winner.getProductId(), winner.getPrice());
+            winner.setLocalOrderNo(record.getCollisionNo());
         }
 
         return winner;
     }
 
     @Override
+    public CollisionRecord findLatestMatchedCollisionRecord(StandardApplyData data) {
+        if (data == null || !StringUtils.hasText(data.getChannelCode()) || !StringUtils.hasText(data.getPhoneMd5())) {
+            return null;
+        }
+
+        return collisionRecordMapper.selectOne(new LambdaQueryWrapper<CollisionRecord>()
+                .eq(CollisionRecord::getChannelCode, data.getChannelCode())
+                .eq(CollisionRecord::getPhoneMd5, data.getPhoneMd5())
+                .eq(CollisionRecord::getCollisionStatus, 0)
+                .isNotNull(CollisionRecord::getProductId)
+                .isNotNull(CollisionRecord::getInstId)
+                .orderByDesc(CollisionRecord::getCreatedAt)
+                .last("LIMIT 1"));
+    }
+
+    @Override
     public PushResult pushToInstitution(StandardApplyData data, Long productId) {
+        return pushToInstitution(data, productId, null);
+    }
+
+    @Override
+    public PushResult pushToInstitution(StandardApplyData data, Long productId, String localOrderNo) {
         log.info("[PUSH] start push, productId={}, phoneMd5={}", productId, data.getPhoneMd5());
 
         InstitutionProduct product = institutionProductMapper.selectById(productId);
@@ -137,8 +167,9 @@ public class ApplyServiceImpl implements ApplyService {
             return PushResult.failure("Adapter not found: " + resolveAdapterKey(inst));
         }
 
+        ApplyOrder order = getOrCreatePushOrder(data, localOrderNo, product, inst);
         String traceId = UUID.randomUUID().toString().replace("-", "");
-        String orderNo = "P" + System.currentTimeMillis();
+        String orderNo = order.getOrderNo();
 
         PushRequest pushReq = new PushRequest();
         pushReq.setOrderNo(orderNo);
@@ -163,18 +194,181 @@ public class ApplyServiceImpl implements ApplyService {
         PushResult result = adapter.push(inst, pushReq);
         long cost = System.currentTimeMillis() - start;
 
-        savePushExecution(orderNo, traceId, product, inst, result, (int) cost);
+        savePushExecution(order, traceId, product, inst, result, (int) cost);
+        if (result != null && result.isSuccess()) {
+            saveInstitutionCustomer(order, inst, product, result);
+            deductionService.createPushSuccessDeduction(order.getOrderNo());
+        }
         return result;
     }
 
-    private ApplyOrder createAndSaveOrder(StandardApplyData data, Channel channel) {
+    private CollisionRecord createAndSaveCollisionRecord(StandardApplyData data, Channel channel) {
         String traceId = UUID.randomUUID().toString().replace("-", "");
 
+        CollisionRecord record = new CollisionRecord();
+        record.setCollisionNo(String.valueOf(System.currentTimeMillis()));
+        record.setChannelId(channel.getId());
+        record.setChannelCode(channel.getChannelCode());
+        record.setTraceId(traceId);
+        record.setPhoneMd5(data.getPhoneMd5());
+        record.setPhoneEnc(AesUtil.encrypt(defaultString(data.getPhone()), channel.getAppKey()));
+        record.setIdCardEnc(AesUtil.encrypt(defaultString(data.getIdCard()), channel.getAppKey()));
+        record.setUserName(AesUtil.encrypt(defaultString(data.getName()), channel.getAppKey()));
+        record.setUserNameMd5(StringUtils.hasText(data.getName()) ? DigestUtil.md5Hex(data.getName()) : null);
+        record.setAge(data.getAge());
+        record.setCityCode(data.getCityCode());
+        record.setWorkCity(data.getWorkCity());
+        record.setGender(data.getGender());
+        record.setProfession(data.getProfession());
+        record.setZhima(data.getZhima());
+        record.setHouse(data.getHouse());
+        record.setVehicle(data.getVehicle());
+        record.setVehicleStatus(data.getVehicleStatus());
+        record.setVehicleValue(data.getVehicleValue());
+        record.setProvidentFund(data.getProvidentFund());
+        record.setSocialSecurity(data.getSocialSecurity());
+        record.setCommercialInsurance(data.getCommercialInsurance());
+        record.setOverdue(data.getOverdue());
+        record.setLoanAmount(data.getLoanAmount());
+        record.setLoanTime(data.getLoanTime());
+        record.setCustomerLevel(StringUtils.hasText(data.getCustomerLevel()) ? data.getCustomerLevel() : calculateCustomerLevel(data));
+        record.setDeviceIp(data.getIp());
+        record.setCollisionStatus(0);
+        record.setExtJson(data.getExtraInfo() == null || data.getExtraInfo().isEmpty() ? null : JSON.toJSONString(data.getExtraInfo()));
+        collisionRecordMapper.insert(record);
+        return record;
+    }
+
+    private PreCheckResult preCheckSingleProduct(CollisionRecord record, InstitutionProduct product, PreCheckRequest basePreCheckReq) {
+        try {
+            Institution inst = institutionMapper.selectById(product.getInstId());
+            if (inst == null) {
+                return null;
+            }
+
+            InstitutionAdapter adapter = adapterRegistry.getAdapter(resolveAdapterKey(inst));
+            if (adapter == null) {
+                return null;
+            }
+
+            PreCheckRequest preCheckReq = copyPreCheckRequest(basePreCheckReq);
+            preCheckReq.setProductId(product.getId());
+            preCheckReq.setInstCode(inst.getInstCode());
+            log.info("[APPLY] dispatch preCheck collisionNo={} productId={} productName={} instId={} instName={} instCode={} preCheckUrl={}",
+                    record.getCollisionNo(),
+                    product.getId(),
+                    product.getProductName(),
+                    inst.getId(),
+                    inst.getInstName(),
+                    inst.getInstCode(),
+                    inst.getPreCheckUrl());
+            long start = System.currentTimeMillis();
+            PreCheckResult result = adapter.preCheck(inst, preCheckReq);
+            long cost = System.currentTimeMillis() - start;
+
+            if (result != null) {
+                result.setProductId(product.getId());
+                result.setInstId(inst.getId());
+                result.setInstCode(inst.getInstCode());
+                savePreCheckRecord(record, product, inst, result, (int) cost);
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("[APPLY] pre-check failed, productId={}, collisionNo={}", product.getId(), record.getCollisionNo(), e);
+            return null;
+        }
+    }
+
+    private void savePreCheckRecord(CollisionRecord collisionRecord, InstitutionProduct product, Institution inst, PreCheckResult result, int cost) {
+        PushRecord pushRecord = new PushRecord();
+        pushRecord.setOrderNo(collisionRecord.getCollisionNo());
+        pushRecord.setChannelId(collisionRecord.getChannelId());
+        pushRecord.setInstId(inst.getId());
+        pushRecord.setInstCode(inst.getInstCode());
+        pushRecord.setProductId(product.getId());
+        pushRecord.setTraceId(collisionRecord.getTraceId());
+        pushRecord.setRequestId(result.getUuid());
+        pushRecord.setPushStatus(result.isPass() ? 2 : 4);
+        pushRecord.setResponseLog(JSON.toJSONString(result));
+        pushRecord.setErrorMsg(result.getRejectReason());
+        pushRecord.setCostMs(cost);
+        pushRecord.setPushedAt(LocalDateTime.now());
+        pushRecordMapper.insert(pushRecord);
+    }
+
+    private void savePushExecution(ApplyOrder order, String traceId, InstitutionProduct product, Institution inst, PushResult result, int cost) {
+        PushRecord record = new PushRecord();
+        record.setOrderId(order.getId());
+        record.setOrderNo(order.getOrderNo());
+        record.setChannelId(order.getChannelId());
+        record.setInstId(inst.getId());
+        record.setInstCode(inst.getInstCode());
+        record.setProductId(product.getId());
+        record.setTraceId(traceId);
+        record.setThirdOrderNo(result.getThirdOrderNo());
+        record.setPushStatus(result.isSuccess() ? 2 : 4);
+        record.setResponseLog(JSON.toJSONString(result));
+        record.setErrorMsg(result.getErrorMsg());
+        record.setCostMs(cost);
+        record.setPushedAt(LocalDateTime.now());
+        pushRecordMapper.insert(record);
+        updateOrderAfterPush(order.getOrderNo(), record.getId(), inst.getId(), product.getId(), product.getProductName(), result);
+    }
+
+    private ApplyOrder getOrCreatePushOrder(StandardApplyData data, String localOrderNo,
+                                            InstitutionProduct product, Institution inst) {
+        ApplyOrder existingOrder = findOrderByCollisionNo(localOrderNo);
+        if (existingOrder != null) {
+            return existingOrder;
+        }
+
+        CollisionRecord collisionRecord = findCollisionRecordByNo(localOrderNo);
+        Channel channel = channelMapper.selectOne(new LambdaQueryWrapper<Channel>()
+                .eq(Channel::getChannelCode, data.getChannelCode())
+                .last("LIMIT 1"));
+        if (channel == null) {
+            throw new RuntimeException("Channel not found: " + data.getChannelCode());
+        }
+
+        return createAndSaveApplyOrder(data, channel, collisionRecord, product, inst);
+    }
+
+    private ApplyOrder findOrderByCollisionNo(String collisionNo) {
+        if (!StringUtils.hasText(collisionNo)) {
+            return null;
+        }
+        return applyOrderMapper.selectOne(new LambdaQueryWrapper<ApplyOrder>()
+                .like(ApplyOrder::getExtJson, "\"sourceCollisionNo\":\"" + collisionNo + "\"")
+                .last("LIMIT 1"));
+    }
+
+    private CollisionRecord findCollisionRecordByNo(String collisionNo) {
+        if (!StringUtils.hasText(collisionNo)) {
+            return null;
+        }
+        return collisionRecordMapper.selectOne(new LambdaQueryWrapper<CollisionRecord>()
+                .eq(CollisionRecord::getCollisionNo, collisionNo.trim())
+                .last("LIMIT 1"));
+    }
+
+    private ApplyOrder findOrderByOrderNo(String orderNo) {
+        if (!StringUtils.hasText(orderNo)) {
+            return null;
+        }
+        return applyOrderMapper.selectOne(new LambdaQueryWrapper<ApplyOrder>()
+                .eq(ApplyOrder::getOrderNo, orderNo.trim())
+                .last("LIMIT 1"));
+    }
+
+    private ApplyOrder createAndSaveApplyOrder(StandardApplyData data, Channel channel,
+                                               CollisionRecord collisionRecord, InstitutionProduct product, Institution inst) {
         ApplyOrder order = new ApplyOrder();
-        order.setOrderNo(String.valueOf(System.currentTimeMillis()));
+        order.setOrderNo("A" + System.currentTimeMillis());
         order.setChannelId(channel.getId());
         order.setChannelCode(channel.getChannelCode());
-        order.setTraceId(traceId);
+        order.setInstId(inst.getId());
+        order.setProductId(product.getId());
+        order.setProductNameSnapshot(product.getProductName());
         order.setPhoneMd5(data.getPhoneMd5());
         order.setPhoneEnc(AesUtil.encrypt(defaultString(data.getPhone()), channel.getAppKey()));
         order.setIdCardEnc(AesUtil.encrypt(defaultString(data.getIdCard()), channel.getAppKey()));
@@ -198,111 +392,105 @@ public class ApplyServiceImpl implements ApplyService {
         order.setLoanTime(data.getLoanTime());
         order.setCustomerLevel(StringUtils.hasText(data.getCustomerLevel()) ? data.getCustomerLevel() : calculateCustomerLevel(data));
         order.setDeviceIp(data.getIp());
-        order.setOrderStatus(0);
+        order.setOrderStatus(1);
+        order.setSettlementPrice(collisionRecord == null ? null : collisionRecord.getSettlementPrice());
+        order.setExtJson(buildApplyOrderExtJson(data, collisionRecord));
         applyOrderMapper.insert(order);
         return order;
     }
 
-    private PreCheckResult preCheckSingleProduct(ApplyOrder order, InstitutionProduct product, PreCheckRequest basePreCheckReq) {
-        try {
-            Institution inst = institutionMapper.selectById(product.getInstId());
-            if (inst == null) {
-                return null;
-            }
-
-            InstitutionAdapter adapter = adapterRegistry.getAdapter(resolveAdapterKey(inst));
-            if (adapter == null) {
-                return null;
-            }
-
-            PreCheckRequest preCheckReq = copyPreCheckRequest(basePreCheckReq);
-            preCheckReq.setProductId(product.getId());
-            preCheckReq.setInstCode(inst.getInstCode());
-            log.info("[APPLY] dispatch preCheck orderNo={} productId={} productName={} instId={} instName={} instCode={} preCheckUrl={}",
-                    order.getOrderNo(),
-                    product.getId(),
-                    product.getProductName(),
-                    inst.getId(),
-                    inst.getInstName(),
-                    inst.getInstCode(),
-                    inst.getPreCheckUrl());
-            long start = System.currentTimeMillis();
-            PreCheckResult result = adapter.preCheck(inst, preCheckReq);
-            long cost = System.currentTimeMillis() - start;
-
-            if (result != null) {
-                result.setProductId(product.getId());
-                result.setInstId(inst.getId());
-                result.setInstCode(inst.getInstCode());
-                savePreCheckRecord(order, product, inst, result, (int) cost);
-            }
-            return result;
-        } catch (Exception e) {
-            log.error("[APPLY] pre-check failed, productId={}, orderNo={}", product.getId(), order.getOrderNo(), e);
-            return null;
-        }
-    }
-
-    private void savePreCheckRecord(ApplyOrder order, InstitutionProduct product, Institution inst, PreCheckResult result, int cost) {
-        PushRecord record = new PushRecord();
-        record.setOrderId(order.getId());
-        record.setOrderNo(order.getOrderNo());
-        record.setChannelId(order.getChannelId());
-        record.setInstId(inst.getId());
-        record.setInstCode(inst.getInstCode());
-        record.setProductId(product.getId());
-        record.setTraceId(order.getTraceId());
-        record.setRequestId(result.getUuid());
-        record.setPushStatus(result.isPass() ? 2 : 4);
-        record.setResponseLog(JSON.toJSONString(result));
-        record.setErrorMsg(result.getRejectReason());
-        record.setCostMs(cost);
-        record.setPushedAt(LocalDateTime.now());
-        pushRecordMapper.insert(record);
-    }
-
-    private void savePushExecution(String orderNo, String traceId, InstitutionProduct product, Institution inst, PushResult result, int cost) {
-        PushRecord record = new PushRecord();
-        record.setOrderNo(orderNo);
-        record.setInstId(inst.getId());
-        record.setInstCode(inst.getInstCode());
-        record.setProductId(product.getId());
-        record.setTraceId(traceId);
-        record.setThirdOrderNo(result.getThirdOrderNo());
-        record.setPushStatus(result.isSuccess() ? 2 : 4);
-        record.setResponseLog(JSON.toJSONString(result));
-        record.setErrorMsg(result.getErrorMsg());
-        record.setCostMs(cost);
-        record.setPushedAt(LocalDateTime.now());
-        pushRecordMapper.insert(record);
-    }
-
-    private void updateOrderSnapshot(String orderNo, Long instId, Long productId, String productNameSnapshot, Long pushId,
-                                     int status, String rejectReason, BigDecimal settlementPrice) {
+    private void updateOrderAfterPush(String orderNo, Long pushId, Long instId, Long productId,
+                                      String productNameSnapshot, PushResult result) {
         LambdaUpdateWrapper<ApplyOrder> wrapper = new LambdaUpdateWrapper<ApplyOrder>()
                 .eq(ApplyOrder::getOrderNo, orderNo)
-                .set(ApplyOrder::getOrderStatus, status);
+                .set(ApplyOrder::getPushId, pushId)
+                .set(ApplyOrder::getInstId, instId)
+                .set(ApplyOrder::getProductId, productId)
+                .set(ApplyOrder::getProductNameSnapshot, productNameSnapshot)
+                .set(ApplyOrder::getOrderStatus, result != null && result.isSuccess() ? 1 : 9)
+                .set(ApplyOrder::getRejectReason, result != null && result.isSuccess()
+                        ? null
+                        : result == null ? "push failed" : result.getErrorMsg());
+        applyOrderMapper.update(null, wrapper);
+    }
+
+    private void saveInstitutionCustomer(ApplyOrder order, Institution inst, InstitutionProduct product, PushResult result) {
+        if (order == null || inst == null) {
+            return;
+        }
+
+        InstitutionCustomer existing = institutionCustomerMapper.selectOne(new LambdaQueryWrapper<InstitutionCustomer>()
+                .eq(InstitutionCustomer::getOrderNo, order.getOrderNo())
+                .last("LIMIT 1"));
+
+        InstitutionCustomer customer = existing == null ? new InstitutionCustomer() : existing;
+        customer.setOrderNo(order.getOrderNo());
+        customer.setChannelId(order.getChannelId());
+        customer.setChannelCode(order.getChannelCode());
+        customer.setInstId(inst.getId());
+        customer.setInstCode(inst.getInstCode());
+        customer.setProductId(order.getProductId());
+        customer.setProductNameSnapshot(StringUtils.hasText(order.getProductNameSnapshot())
+                ? order.getProductNameSnapshot()
+                : product == null ? null : product.getProductName());
+        customer.setThirdOrderNo(result == null ? null : result.getThirdOrderNo());
+        customer.setPhoneMd5(order.getPhoneMd5());
+        customer.setPhoneEnc(order.getPhoneEnc());
+        customer.setIdCardEnc(order.getIdCardEnc());
+        customer.setUserName(order.getUserName());
+        customer.setUserNameMd5(order.getUserNameMd5());
+        customer.setAge(order.getAge());
+        customer.setCityCode(order.getCityCode());
+        customer.setWorkCity(order.getWorkCity());
+        customer.setGender(order.getGender());
+        customer.setProfession(order.getProfession());
+        customer.setZhima(order.getZhima());
+        customer.setHouse(order.getHouse());
+        customer.setVehicle(order.getVehicle());
+        customer.setVehicleStatus(order.getVehicleStatus());
+        customer.setVehicleValue(order.getVehicleValue());
+        customer.setProvidentFund(order.getProvidentFund());
+        customer.setSocialSecurity(order.getSocialSecurity());
+        customer.setCommercialInsurance(order.getCommercialInsurance());
+        customer.setOverdue(order.getOverdue());
+        customer.setLoanAmount(order.getLoanAmount());
+        customer.setLoanTime(order.getLoanTime());
+        customer.setCustomerLevel(order.getCustomerLevel());
+        customer.setDeviceIp(order.getDeviceIp());
+        customer.setSettlementPrice(order.getSettlementPrice());
+        customer.setCustomerStatus(1);
+        customer.setExtJson(order.getExtJson());
+
+        if (existing == null) {
+            institutionCustomerMapper.insert(customer);
+        } else {
+            institutionCustomerMapper.updateById(customer);
+        }
+    }
+
+    private void updateCollisionSnapshot(String collisionNo, Long instId, Long productId, String productNameSnapshot,
+                                         int status, String rejectReason, BigDecimal settlementPrice) {
+        LambdaUpdateWrapper<CollisionRecord> wrapper = new LambdaUpdateWrapper<CollisionRecord>()
+                .eq(CollisionRecord::getCollisionNo, collisionNo)
+                .set(CollisionRecord::getCollisionStatus, status);
 
         if (instId != null) {
-            wrapper.set(ApplyOrder::getInstId, instId);
+            wrapper.set(CollisionRecord::getInstId, instId);
         }
         if (productId != null) {
-            wrapper.set(ApplyOrder::getProductId, productId);
+            wrapper.set(CollisionRecord::getProductId, productId);
         }
         if (productNameSnapshot != null) {
-            wrapper.set(ApplyOrder::getProductNameSnapshot, productNameSnapshot);
-        }
-        if (pushId != null) {
-            wrapper.set(ApplyOrder::getPushId, pushId);
+            wrapper.set(CollisionRecord::getProductNameSnapshot, productNameSnapshot);
         }
         if (rejectReason != null) {
-            wrapper.set(ApplyOrder::getRejectReason, rejectReason);
+            wrapper.set(CollisionRecord::getRejectReason, rejectReason);
         }
         if (settlementPrice != null) {
-            wrapper.set(ApplyOrder::getSettlementPrice, settlementPrice);
+            wrapper.set(CollisionRecord::getSettlementPrice, settlementPrice);
         }
 
-        applyOrderMapper.update(null, wrapper);
+        collisionRecordMapper.update(null, wrapper);
     }
 
     private PreCheckRequest createPreCheckRequest(StandardApplyData data) {
@@ -387,6 +575,28 @@ public class ApplyServiceImpl implements ApplyService {
                         instCodeMap.get(product.getInstId()),
                         product.getPriority()))
                 .collect(Collectors.joining(", ", "[", "]"));
+    }
+
+    private long resolveInstitutionTimeoutMs(InstitutionProduct product) {
+        if (product == null || product.getInstId() == null) {
+            return 3000L;
+        }
+        Institution institution = institutionMapper.selectById(product.getInstId());
+        if (institution == null || institution.getTimeoutMs() == null || institution.getTimeoutMs() <= 0) {
+            return 3000L;
+        }
+        return institution.getTimeoutMs();
+    }
+
+    private String buildApplyOrderExtJson(StandardApplyData data, CollisionRecord collisionRecord) {
+        Map<String, Object> extJson = new LinkedHashMap<>();
+        if (data != null && data.getExtraInfo() != null && !data.getExtraInfo().isEmpty()) {
+            extJson.putAll(data.getExtraInfo());
+        }
+        if (collisionRecord != null && StringUtils.hasText(collisionRecord.getCollisionNo())) {
+            extJson.put("sourceCollisionNo", collisionRecord.getCollisionNo());
+        }
+        return extJson.isEmpty() ? null : JSON.toJSONString(extJson);
     }
 
     private String defaultString(String value) {

@@ -56,6 +56,8 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
 
     private static final String DEFAULT_ADAPTER_KEY = "qlqMaskApiPushService";
     private static final Set<String> SUPPORTED_ENCRYPT_TYPES = Set.of("PLAIN", "AES", "AES_ECB", "AES_CBC", "ECB", "CBC");
+    private static final Set<String> SUPPORTED_CIPHER_MODES = Set.of("CBC", "ECB");
+    private static final Set<String> SUPPORTED_PADDING_MODES = Set.of("PKCS5Padding", "PKCS7Padding", "NoPadding");
 
     private final CityConfigMapper cityConfigMapper;
     private final InstitutionMapper institutionMapper;
@@ -197,7 +199,11 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
                 new OptionVO("德立借适配器", "deljApiPushService")
         ));
         vo.setEncryptTypeOptions(buildEncryptTypeOptions());
+        vo.setCipherModeOptions(buildCipherModeOptions());
+        vo.setPaddingModeOptions(buildPaddingModeOptions());
         vo.setNotifyEncryptTypeOptions(buildEncryptTypeOptions());
+        vo.setNotifyCipherModeOptions(buildCipherModeOptions());
+        vo.setNotifyPaddingModeOptions(buildPaddingModeOptions());
         return vo;
     }
 
@@ -429,7 +435,13 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
         vo.setApiNotifyUrl(institution.getApiNotifyUrl());
         vo.setAppKey(institution.getAppKey());
         vo.setEncryptType(institution.getEncryptType());
+        vo.setCipherMode(institution.getCipherMode());
+        vo.setPaddingMode(institution.getPaddingMode());
+        vo.setIvValue(institution.getIvValue());
         vo.setNotifyEncryptType(institution.getNotifyEncryptType());
+        vo.setNotifyCipherMode(institution.getNotifyCipherMode());
+        vo.setNotifyPaddingMode(institution.getNotifyPaddingMode());
+        vo.setNotifyIvValue(institution.getNotifyIvValue());
         vo.setTimeoutMs(institution.getTimeoutMs());
         vo.setStatus(institution.getStatus());
         vo.setStatusDesc(resolveStatus(institution.getStatus()));
@@ -454,7 +466,13 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
         vo.setApiNotifyUrl(institution.getApiNotifyUrl());
         vo.setAppKey(institution.getAppKey());
         vo.setEncryptType(institution.getEncryptType());
+        vo.setCipherMode(institution.getCipherMode());
+        vo.setPaddingMode(institution.getPaddingMode());
+        vo.setIvValue(institution.getIvValue());
         vo.setNotifyEncryptType(institution.getNotifyEncryptType());
+        vo.setNotifyCipherMode(institution.getNotifyCipherMode());
+        vo.setNotifyPaddingMode(institution.getNotifyPaddingMode());
+        vo.setNotifyIvValue(institution.getNotifyIvValue());
         vo.setTimeoutMs(institution.getTimeoutMs());
         vo.setStatus(institution.getStatus());
         vo.setStatusDesc(resolveStatus(institution.getStatus()));
@@ -491,7 +509,13 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
         institution.setApiNotifyUrl(defaultText(request == null ? null : request.getApiNotifyUrl(), buildDefaultNotifyUrl(instCode)));
         institution.setAppKey(defaultText(request == null ? null : request.getAppKey(), "1234567890abcdef"));
         institution.setEncryptType(normalizeEncryptType(request == null ? null : request.getEncryptType(), "PLAIN"));
+        institution.setCipherMode(normalizeCipherMode(request == null ? null : request.getCipherMode(), institution.getEncryptType()));
+        institution.setPaddingMode(normalizePaddingMode(request == null ? null : request.getPaddingMode(), "PKCS5Padding"));
+        institution.setIvValue(trimToNull(request == null ? null : request.getIvValue()));
         institution.setNotifyEncryptType(normalizeEncryptType(request == null ? null : request.getNotifyEncryptType(), "PLAIN"));
+        institution.setNotifyCipherMode(normalizeCipherMode(request == null ? null : request.getNotifyCipherMode(), institution.getNotifyEncryptType()));
+        institution.setNotifyPaddingMode(normalizePaddingMode(request == null ? null : request.getNotifyPaddingMode(), "PKCS5Padding"));
+        institution.setNotifyIvValue(trimToNull(request == null ? null : request.getNotifyIvValue()));
         institution.setTimeoutMs(request == null || request.getTimeoutMs() == null ? 3000 : request.getTimeoutMs());
         institution.setApiMethodName(defaultText(request == null ? null : request.getBeanName(), DEFAULT_ADAPTER_KEY));
     }
@@ -518,6 +542,10 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
         return StringUtils.hasText(value) ? value.trim() : fallback;
     }
 
+    private String trimToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
     private String normalizeEncryptType(String value, String fallback) {
         String normalized = StringUtils.hasText(value) ? value.trim().toUpperCase(Locale.ROOT) : fallback;
         if (!SUPPORTED_ENCRYPT_TYPES.contains(normalized)) {
@@ -532,6 +560,47 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
                 new OptionVO("AES/CBC/PKCS5Padding", "AES"),
                 new OptionVO("AES/ECB/PKCS5Padding", "AES_ECB"),
                 new OptionVO("AES/CBC/PKCS5Padding（显式）", "AES_CBC")
+        );
+    }
+
+    private String normalizeCipherMode(String value, String encryptType) {
+        String fallback = defaultCipherMode(encryptType);
+        String normalized = StringUtils.hasText(value) ? value.trim().toUpperCase(Locale.ROOT) : fallback;
+        if (!SUPPORTED_CIPHER_MODES.contains(normalized)) {
+            throw new BizException("unsupported cipherMode: " + normalized);
+        }
+        return normalized;
+    }
+
+    private String normalizePaddingMode(String value, String fallback) {
+        String normalized = StringUtils.hasText(value) ? value.trim() : fallback;
+        if (!SUPPORTED_PADDING_MODES.contains(normalized)) {
+            throw new BizException("unsupported paddingMode: " + normalized);
+        }
+        return normalized;
+    }
+
+    private String defaultCipherMode(String encryptType) {
+        String normalized = normalizeEncryptType(encryptType, "PLAIN");
+        return switch (normalized) {
+            case "AES_ECB", "ECB" -> "ECB";
+            case "PLAIN" -> "ECB";
+            default -> "CBC";
+        };
+    }
+
+    private List<OptionVO> buildCipherModeOptions() {
+        return List.of(
+                new OptionVO("CBC", "CBC"),
+                new OptionVO("ECB", "ECB")
+        );
+    }
+
+    private List<OptionVO> buildPaddingModeOptions() {
+        return List.of(
+                new OptionVO("PKCS5Padding", "PKCS5Padding"),
+                new OptionVO("PKCS7Padding", "PKCS7Padding"),
+                new OptionVO("NoPadding", "NoPadding")
         );
     }
 
