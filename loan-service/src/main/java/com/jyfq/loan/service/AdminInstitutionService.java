@@ -11,6 +11,7 @@ import com.jyfq.loan.model.vo.InstitutionApiConfigListVO;
 import com.jyfq.loan.model.vo.InstitutionApiConfigOptionsVO;
 import com.jyfq.loan.model.vo.InstitutionDetailVO;
 import com.jyfq.loan.model.vo.InstitutionListVO;
+import com.jyfq.loan.model.vo.InstitutionOptionsVO;
 import com.jyfq.loan.model.vo.InstitutionProductVO;
 import com.jyfq.loan.model.vo.InstitutionRechargeRecordVO;
 import com.jyfq.loan.model.vo.OptionVO;
@@ -33,6 +34,8 @@ public interface AdminInstitutionService {
     InstitutionApiConfigDetailVO getInstitutionApiConfigDetail(Long instId);
 
     InstitutionApiConfigOptionsVO getInstitutionApiConfigOptions();
+
+    InstitutionOptionsVO getInstitutionOptions();
 
     void updateInstitution(Long instId, InstitutionSaveDTO request);
 

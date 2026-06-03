@@ -26,6 +26,8 @@ desktop.ini
 hs_err_pid*
 
 # ==================== Maven ====================
+.m2repo/
+maven-repo/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup

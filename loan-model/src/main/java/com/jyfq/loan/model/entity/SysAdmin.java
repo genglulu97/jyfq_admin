@@ -33,12 +33,12 @@ public class SysAdmin {
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 
-    @TableField(fill = FieldFill.INSERT)
+    @TableField(exist = false)
     private String createBy;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 
-    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @TableField(exist = false)
     private String updateBy;
 }

@@ -1,10 +1,12 @@
 package com.jyfq.loan.thirdparty.impl;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.jyfq.loan.common.util.AesUtil;
 import com.jyfq.loan.model.dto.StandardApplyData;
 import com.jyfq.loan.model.entity.Institution;
 import com.jyfq.loan.thirdparty.AbstractInstitutionAdapter;
+import com.jyfq.loan.thirdparty.MobileEightPreCheckAdapter;
 import com.jyfq.loan.thirdparty.model.PreCheckRequest;
 import com.jyfq.loan.thirdparty.model.PreCheckResult;
 import com.jyfq.loan.thirdparty.model.PushRequest;
@@ -13,14 +15,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 德立金 downstream adapter.
  * Protocol: top-level JSON plain text, only the "data" field is AES/ECB/PKCS5Padding encrypted.
  */
 @Service("deljApiPushService")
-public class DeLjApiAdapter extends AbstractInstitutionAdapter {
+public class DeLjApiAdapter extends AbstractInstitutionAdapter implements MobileEightPreCheckAdapter {
 
     private static final Map<Integer, Integer> LOAN_TIME_MAP = Map.of(
             6, 2,
@@ -68,6 +74,47 @@ public class DeLjApiAdapter extends AbstractInstitutionAdapter {
     }
 
     @Override
+    public PreCheckResult mobileEightPreCheck(Institution institution, PreCheckRequest req) {
+        if (institution == null || !StringUtils.hasText(institution.getPreCheckUrl())) {
+            return PreCheckResult.builder()
+                    .pass(false)
+                    .rejectReason("preCheckUrl is not configured")
+                    .build();
+        }
+
+        JSONObject plainData = buildMobileEightPreCheckPlainData(req);
+        JSONObject requestPayload = wrapMobileEightEnvelope(institution, plainData);
+        JSONObject requestLog = new JSONObject();
+        requestLog.put("plainPayload", plainData);
+        requestLog.put("requestPayload", requestPayload);
+
+        JSONObject resp = doPlainPost(institution, institution.getPreCheckUrl(), requestPayload, JSONObject.class);
+        JSONObject data = resolveResultData(resp);
+        if (isSuccess(resp)) {
+            return PreCheckResult.builder()
+                    .pass(true)
+                    .instCode(institution.getInstCode())
+                    .uuid(resolveText(data, resp, "requestId", "orderId", "uuid", "traceId"))
+                    .price(resolvePrice(data))
+                    .productName(resolveText(data, resp, "productName"))
+                    .companyName(resolveText(data, resp, "companyName"))
+                    .protocolList(resolveProtocolList(data))
+                    .matchSize(resolveMatchSize(data))
+                    .mobileList(resolveMobileList(data))
+                    .requestLog(requestLog.toJSONString())
+                    .responseLog(resp == null ? null : resp.toJSONString())
+                    .build();
+        }
+        return PreCheckResult.builder()
+                .pass(false)
+                .instCode(institution.getInstCode())
+                .rejectReason(resolveText(data, resp, "msg", "message", "errorMsg"))
+                .requestLog(requestLog.toJSONString())
+                .responseLog(resp == null ? null : resp.toJSONString())
+                .build();
+    }
+
+    @Override
     public PushResult push(Institution institution, PushRequest req) {
         if (institution == null || !StringUtils.hasText(institution.getApiPushUrl())) {
             return PushResult.failure("apiPushUrl is not configured");
@@ -106,6 +153,26 @@ public class DeLjApiAdapter extends AbstractInstitutionAdapter {
         plainData.put("vehicle", normalizeVehicle(req.getVehicle()));
         plainData.put("loanAmount", normalizeLoanAmount(req.getAmount()));
         return wrapEncryptedEnvelope(institution, plainData);
+    }
+
+    private JSONObject buildMobileEightPreCheckPlainData(PreCheckRequest req) {
+        JSONObject plainData = new JSONObject();
+        plainData.put("requestId", resolveRequestId(req == null ? null : req.getRequestId()));
+        plainData.put("mobileEight", resolveMobileEight(req == null ? null : req.getMobileEight(), req == null ? null : req.getPhone()));
+        plainData.put("loanAmount", normalizeLoanAmountWan(req == null ? null : req.getAmount()));
+        plainData.put("cityName", req == null ? null : resolveCityName(req.getWorkCity(), req.getCityCode()));
+        plainData.put("ip", req == null ? null : req.getIp());
+        plainData.put("age", req == null ? null : req.getAge());
+        plainData.put("sex", normalizeGender(req == null ? null : req.getGender()));
+        plainData.put("hasHouse", normalizeYesNo(req == null ? null : req.getHouse()));
+        plainData.put("hasCar", normalizeYesNo(req == null ? null : req.getVehicle()));
+        plainData.put("hasCompany", normalizeHasCompany(req == null ? null : req.getProfession()));
+        plainData.put("hasInsurance", normalizeHasAsset(req == null ? null : req.getCommercialInsurance()));
+        plainData.put("hasSocial", normalizeHasAsset(req == null ? null : req.getSocialSecurity()));
+        plainData.put("hasFund", normalizeHasAsset(req == null ? null : req.getProvidentFund()));
+        plainData.put("zmfScore", normalizeZmfScore(req == null ? null : req.getZhima()));
+        plainData.put("overdue", normalizeMobileEightOverdue(req == null ? null : req.getOverdue()));
+        return plainData;
     }
 
     private JSONObject buildApplyEnvelope(Institution institution, PushRequest req) {
@@ -147,6 +214,17 @@ public class DeLjApiAdapter extends AbstractInstitutionAdapter {
         return envelope;
     }
 
+    private JSONObject wrapMobileEightEnvelope(Institution institution, JSONObject plainData) {
+        String appKey = institution == null ? null : institution.getAppKey();
+        String encryptedData = StringUtils.hasText(appKey)
+                ? AesUtil.encryptECB(plainData.toJSONString(), appKey)
+                : plainData.toJSONString();
+        JSONObject envelope = new JSONObject();
+        envelope.put("channelCode", resolveOrgId(institution));
+        envelope.put("data", encryptedData);
+        return envelope;
+    }
+
     private String resolveOrgId(Institution institution) {
         return institution == null ? null : institution.getBusinessCode();
     }
@@ -156,7 +234,7 @@ public class DeLjApiAdapter extends AbstractInstitutionAdapter {
             return false;
         }
         Integer code = resp.getInteger("code");
-        return code != null && code == 0;
+        return code != null && (code == 0 || code == 200);
     }
 
     private JSONObject resolveResultData(JSONObject resp) {
@@ -186,6 +264,36 @@ public class DeLjApiAdapter extends AbstractInstitutionAdapter {
         return data.getBigDecimal("price");
     }
 
+    private int resolveMatchSize(JSONObject data) {
+        if (data == null) {
+            return 0;
+        }
+        Integer matchSize = data.getInteger("matchSize");
+        if (matchSize != null) {
+            return matchSize;
+        }
+        JSONArray mobileList = data.getJSONArray("mobileList");
+        return mobileList == null ? 0 : mobileList.size();
+    }
+
+    private List<Map<String, Object>> resolveProtocolList(JSONObject data) {
+        if (data == null || data.getJSONArray("aggrements") == null) {
+            return null;
+        }
+        return data.getJSONArray("aggrements").toJavaList(JSONObject.class).stream()
+                .map(item -> new LinkedHashMap<String, Object>(item))
+                .collect(Collectors.toList());
+    }
+
+    private List<String> resolveMobileList(JSONObject data) {
+        if (data == null || data.getJSONArray("mobileList") == null) {
+            return null;
+        }
+        return data.getJSONArray("mobileList").stream()
+                .map(String::valueOf)
+                .collect(Collectors.toList());
+    }
+
     private Integer normalizeGender(Integer value) {
         if (value == null) {
             return 0;
@@ -193,6 +301,76 @@ public class DeLjApiAdapter extends AbstractInstitutionAdapter {
         return switch (value) {
             case 1, 2 -> value;
             default -> 0;
+        };
+    }
+
+    private String resolveRequestId(String requestId) {
+        if (StringUtils.hasText(requestId)) {
+            return requestId.trim();
+        }
+        return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private String resolveMobileEight(String mobileEight, String phone) {
+        if (StringUtils.hasText(mobileEight)) {
+            return mobileEight.trim();
+        }
+        if (StringUtils.hasText(phone)) {
+            String trimmed = phone.trim();
+            return trimmed.length() <= 8 ? trimmed : trimmed.substring(trimmed.length() - 8);
+        }
+        return null;
+    }
+
+    private Integer normalizeLoanAmountWan(Integer amount) {
+        if (amount == null) {
+            return null;
+        }
+        if (amount > 1000) {
+            return Math.max(1, amount / 10000);
+        }
+        return amount;
+    }
+
+    private Integer normalizeYesNo(Integer value) {
+        return Integer.valueOf(1).equals(value) ? 1 : 0;
+    }
+
+    private Integer normalizeHasCompany(Integer profession) {
+        return Integer.valueOf(3).equals(profession) ? 1 : 0;
+    }
+
+    private Integer normalizeHasAsset(Integer value) {
+        return value != null && value > 0 ? 1 : 0;
+    }
+
+    private Integer normalizeZmfScore(Integer zhima) {
+        if (zhima == null || zhima <= 0) {
+            return 0;
+        }
+        if (zhima >= 1 && zhima <= 4) {
+            return zhima;
+        }
+        if (zhima < 600) {
+            return 1;
+        }
+        if (zhima < 650) {
+            return 4;
+        }
+        if (zhima < 700) {
+            return 2;
+        }
+        return 3;
+    }
+
+    private Integer normalizeMobileEightOverdue(Integer value) {
+        if (value == null) {
+            return 2;
+        }
+        return switch (value) {
+            case 1 -> 1;
+            case 2, 3 -> 3;
+            default -> 2;
         };
     }
 

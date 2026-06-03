@@ -1,399 +1,384 @@
+-- =====================================================
+-- City seed data
+-- Source: Downloads/city-code workbook supplied on 2026-05-22
+-- City code convention: official 6-digit city-level administrative code
+-- Existing application matching remains backward-compatible with legacy 4-digit city codes.
+-- =====================================================
+
 USE `loan_platform`;
 
-INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`)
-VALUES
-  ('北京', '110100', '北京市', 1, 1),
-  ('天津', '120100', '天津市', 1, 2),
-  ('河北省', '130100', '石家庄市', 1, 3),
-  ('河北省', '130200', '唐山市', 1, 4),
-  ('河北省', '130300', '秦皇岛市', 1, 5),
-  ('河北省', '130400', '邯郸市', 1, 6),
-  ('河北省', '130500', '邢台市', 1, 7),
-  ('河北省', '130600', '保定市', 1, 8),
-  ('河北省', '130700', '张家口市', 1, 9),
-  ('河北省', '130800', '承德市', 1, 10),
-  ('河北省', '130900', '沧州市', 1, 11),
-  ('河北省', '131000', '廊坊市', 1, 12),
-  ('河北省', '131100', '衡水市', 1, 13),
-  ('山西省', '140100', '太原市', 1, 14),
-  ('山西省', '140200', '大同市', 1, 15),
-  ('山西省', '140300', '阳泉市', 1, 16),
-  ('山西省', '140400', '长治市', 1, 17),
-  ('山西省', '140500', '晋城市', 1, 18),
-  ('山西省', '140600', '朔州市', 1, 19),
-  ('山西省', '140700', '晋中市', 1, 20),
-  ('山西省', '140800', '运城市', 1, 21),
-  ('山西省', '140900', '忻州市', 1, 22),
-  ('山西省', '141000', '临汾市', 1, 23),
-  ('山西省', '141100', '吕梁市', 1, 24),
-  ('内蒙古自治区', '150100', '呼和浩特市', 1, 25),
-  ('内蒙古自治区', '150200', '包头市', 1, 26),
-  ('内蒙古自治区', '150300', '乌海市', 1, 27),
-  ('内蒙古自治区', '150400', '赤峰市', 1, 28),
-  ('内蒙古自治区', '150500', '通辽市', 1, 29),
-  ('内蒙古自治区', '150600', '鄂尔多斯市', 1, 30),
-  ('内蒙古自治区', '150700', '呼伦贝尔市', 1, 31),
-  ('内蒙古自治区', '150800', '巴彦淖尔市', 1, 32),
-  ('内蒙古自治区', '150900', '乌兰察布市', 1, 33),
-  ('内蒙古自治区', '152200', '兴安盟', 1, 34),
-  ('内蒙古自治区', '152500', '锡林郭勒盟', 1, 35),
-  ('内蒙古自治区', '152900', '阿拉善盟', 1, 36),
-  ('辽宁省', '210100', '沈阳市', 1, 37),
-  ('辽宁省', '210200', '大连市', 1, 38),
-  ('辽宁省', '210300', '鞍山市', 1, 39),
-  ('辽宁省', '210400', '抚顺市', 1, 40),
-  ('辽宁省', '210500', '本溪市', 1, 41),
-  ('辽宁省', '210600', '丹东市', 1, 42),
-  ('辽宁省', '210700', '锦州市', 1, 43),
-  ('辽宁省', '210800', '营口市', 1, 44),
-  ('辽宁省', '210900', '阜新市', 1, 45),
-  ('辽宁省', '211000', '辽阳市', 1, 46),
-  ('辽宁省', '211100', '盘锦市', 1, 47),
-  ('辽宁省', '211200', '铁岭市', 1, 48),
-  ('辽宁省', '211300', '朝阳市', 1, 49),
-  ('辽宁省', '211400', '葫芦岛市', 1, 50),
-  ('吉林省', '220100', '长春市', 1, 51),
-  ('吉林省', '220200', '吉林市', 1, 52),
-  ('吉林省', '220300', '四平市', 1, 53),
-  ('吉林省', '220400', '辽源市', 1, 54),
-  ('吉林省', '220500', '通化市', 1, 55),
-  ('吉林省', '220600', '白山市', 1, 56),
-  ('吉林省', '220700', '松原市', 1, 57),
-  ('吉林省', '220800', '白城市', 1, 58),
-  ('吉林省', '222400', '延边朝鲜族自治州', 1, 59),
-  ('黑龙江省', '230100', '哈尔滨市', 1, 60),
-  ('黑龙江省', '230200', '齐齐哈尔市', 1, 61),
-  ('黑龙江省', '230300', '鸡西市', 1, 62),
-  ('黑龙江省', '230400', '鹤岗市', 1, 63),
-  ('黑龙江省', '230500', '双鸭山市', 1, 64),
-  ('黑龙江省', '230600', '大庆市', 1, 65),
-  ('黑龙江省', '230700', '伊春市', 1, 66),
-  ('黑龙江省', '230800', '佳木斯市', 1, 67),
-  ('黑龙江省', '230900', '七台河市', 1, 68),
-  ('黑龙江省', '231000', '牡丹江市', 1, 69),
-  ('黑龙江省', '231100', '黑河市', 1, 70),
-  ('黑龙江省', '231200', '绥化市', 1, 71),
-  ('黑龙江省', '232700', '大兴安岭地区', 1, 72),
-  ('上海', '310100', '上海市', 1, 73),
-  ('江苏省', '320100', '南京市', 1, 74),
-  ('江苏省', '320200', '无锡市', 1, 75),
-  ('江苏省', '320300', '徐州市', 1, 76),
-  ('江苏省', '320400', '常州市', 1, 77),
-  ('江苏省', '320500', '苏州市', 1, 78),
-  ('江苏省', '320600', '南通市', 1, 79),
-  ('江苏省', '320700', '连云港市', 1, 80),
-  ('江苏省', '320800', '淮安市', 1, 81),
-  ('江苏省', '320900', '盐城市', 1, 82),
-  ('江苏省', '321000', '扬州市', 1, 83),
-  ('江苏省', '321100', '镇江市', 1, 84),
-  ('江苏省', '321200', '泰州市', 1, 85),
-  ('江苏省', '321300', '宿迁市', 1, 86),
-  ('浙江省', '330100', '杭州市', 1, 87),
-  ('浙江省', '330200', '宁波市', 1, 88),
-  ('浙江省', '330300', '温州市', 1, 89),
-  ('浙江省', '330400', '嘉兴市', 1, 90),
-  ('浙江省', '330500', '湖州市', 1, 91),
-  ('浙江省', '330600', '绍兴市', 1, 92),
-  ('浙江省', '330700', '金华市', 1, 93),
-  ('浙江省', '330800', '衢州市', 1, 94),
-  ('浙江省', '330900', '舟山市', 1, 95),
-  ('浙江省', '331000', '台州市', 1, 96),
-  ('浙江省', '331100', '丽水市', 1, 97),
-  ('安徽省', '340100', '合肥市', 1, 98),
-  ('安徽省', '340200', '芜湖市', 1, 99),
-  ('安徽省', '340300', '蚌埠市', 1, 100),
-  ('安徽省', '340400', '淮南市', 1, 101),
-  ('安徽省', '340500', '马鞍山市', 1, 102),
-  ('安徽省', '340600', '淮北市', 1, 103),
-  ('安徽省', '340700', '铜陵市', 1, 104),
-  ('安徽省', '340800', '安庆市', 1, 105),
-  ('安徽省', '341000', '黄山市', 1, 106),
-  ('安徽省', '341100', '滁州市', 1, 107),
-  ('安徽省', '341200', '阜阳市', 1, 108),
-  ('安徽省', '341300', '宿州市', 1, 109),
-  ('安徽省', '341500', '六安市', 1, 110),
-  ('安徽省', '341600', '亳州市', 1, 111),
-  ('安徽省', '341700', '池州市', 1, 112),
-  ('安徽省', '341800', '宣城市', 1, 113),
-  ('福建省', '350100', '福州市', 1, 114),
-  ('福建省', '350200', '厦门市', 1, 115),
-  ('福建省', '350300', '莆田市', 1, 116),
-  ('福建省', '350400', '三明市', 1, 117),
-  ('福建省', '350500', '泉州市', 1, 118),
-  ('福建省', '350600', '漳州市', 1, 119),
-  ('福建省', '350700', '南平市', 1, 120),
-  ('福建省', '350800', '龙岩市', 1, 121),
-  ('福建省', '350900', '宁德市', 1, 122),
-  ('江西省', '360100', '南昌市', 1, 123),
-  ('江西省', '360200', '景德镇市', 1, 124),
-  ('江西省', '360300', '萍乡市', 1, 125),
-  ('江西省', '360400', '九江市', 1, 126),
-  ('江西省', '360500', '新余市', 1, 127),
-  ('江西省', '360600', '鹰潭市', 1, 128),
-  ('江西省', '360700', '赣州市', 1, 129),
-  ('江西省', '360800', '吉安市', 1, 130),
-  ('江西省', '360900', '宜春市', 1, 131),
-  ('江西省', '361000', '抚州市', 1, 132),
-  ('江西省', '361100', '上饶市', 1, 133),
-  ('山东省', '370100', '济南市', 1, 134),
-  ('山东省', '370200', '青岛市', 1, 135),
-  ('山东省', '370300', '淄博市', 1, 136),
-  ('山东省', '370400', '枣庄市', 1, 137),
-  ('山东省', '370500', '东营市', 1, 138),
-  ('山东省', '370600', '烟台市', 1, 139),
-  ('山东省', '370700', '潍坊市', 1, 140),
-  ('山东省', '370800', '济宁市', 1, 141),
-  ('山东省', '370900', '泰安市', 1, 142),
-  ('山东省', '371000', '威海市', 1, 143),
-  ('山东省', '371100', '日照市', 1, 144),
-  ('山东省', '371200', '莱芜市', 1, 145),
-  ('山东省', '371300', '临沂市', 1, 146),
-  ('山东省', '371400', '德州市', 1, 147),
-  ('山东省', '371500', '聊城市', 1, 148),
-  ('山东省', '371600', '滨州市', 1, 149),
-  ('山东省', '371700', '菏泽市', 1, 150),
-  ('河南省', '410100', '郑州市', 1, 151),
-  ('河南省', '410200', '开封市', 1, 152),
-  ('河南省', '410300', '洛阳市', 1, 153),
-  ('河南省', '410400', '平顶山市', 1, 154),
-  ('河南省', '410500', '安阳市', 1, 155),
-  ('河南省', '410600', '鹤壁市', 1, 156),
-  ('河南省', '410700', '新乡市', 1, 157),
-  ('河南省', '410800', '焦作市', 1, 158),
-  ('河南省', '410881', '济源市', 1, 159),
-  ('河南省', '410900', '濮阳市', 1, 160),
-  ('河南省', '411000', '许昌市', 1, 161),
-  ('河南省', '411100', '漯河市', 1, 162),
-  ('河南省', '411200', '三门峡市', 1, 163),
-  ('河南省', '411300', '南阳市', 1, 164),
-  ('河南省', '411400', '商丘市', 1, 165),
-  ('河南省', '411500', '信阳市', 1, 166),
-  ('河南省', '411600', '周口市', 1, 167),
-  ('河南省', '411700', '驻马店市', 1, 168),
-  ('湖北省', '420100', '武汉市', 1, 169),
-  ('湖北省', '420200', '黄石市', 1, 170),
-  ('湖北省', '420300', '十堰市', 1, 171),
-  ('湖北省', '420500', '宜昌市', 1, 172),
-  ('湖北省', '420600', '襄阳市', 1, 173),
-  ('湖北省', '420700', '鄂州市', 1, 174),
-  ('湖北省', '420800', '荆门市', 1, 175),
-  ('湖北省', '420900', '孝感市', 1, 176),
-  ('湖北省', '421000', '荆州市', 1, 177),
-  ('湖北省', '421100', '黄冈市', 1, 178),
-  ('湖北省', '421200', '咸宁市', 1, 179),
-  ('湖北省', '421300', '随州市', 1, 180),
-  ('湖北省', '422800', '恩施土家族苗族自治州', 1, 181),
-  ('湖北省', '429004', '仙桃市', 1, 182),
-  ('湖北省', '429005', '潜江市', 1, 183),
-  ('湖北省', '429006', '天门市', 1, 184),
-  ('湖北省', '429021', '神农架林区', 1, 185),
-  ('湖南省', '430100', '长沙市', 1, 186),
-  ('湖南省', '430200', '株洲市', 1, 187),
-  ('湖南省', '430300', '湘潭市', 1, 188),
-  ('湖南省', '430400', '衡阳市', 1, 189),
-  ('湖南省', '430500', '邵阳市', 1, 190),
-  ('湖南省', '430600', '岳阳市', 1, 191),
-  ('湖南省', '430700', '常德市', 1, 192),
-  ('湖南省', '430800', '张家界市', 1, 193),
-  ('湖南省', '430900', '益阳市', 1, 194),
-  ('湖南省', '431000', '郴州市', 1, 195),
-  ('湖南省', '431100', '永州市', 1, 196),
-  ('湖南省', '431200', '怀化市', 1, 197),
-  ('湖南省', '431300', '娄底市', 1, 198),
-  ('湖南省', '433100', '湘西土家族苗族自治州', 1, 199),
-  ('广东省', '440100', '广州市', 1, 200),
-  ('广东省', '440200', '韶关市', 1, 201),
-  ('广东省', '440300', '深圳市', 1, 202),
-  ('广东省', '440400', '珠海市', 1, 203),
-  ('广东省', '440500', '汕头市', 1, 204),
-  ('广东省', '440600', '佛山市', 1, 205),
-  ('广东省', '440700', '江门市', 1, 206),
-  ('广东省', '440800', '湛江市', 1, 207),
-  ('广东省', '440900', '茂名市', 1, 208),
-  ('广东省', '441200', '肇庆市', 1, 209),
-  ('广东省', '441300', '惠州市', 1, 210),
-  ('广东省', '441400', '梅州市', 1, 211),
-  ('广东省', '441500', '汕尾市', 1, 212),
-  ('广东省', '441600', '河源市', 1, 213),
-  ('广东省', '441700', '阳江市', 1, 214),
-  ('广东省', '441800', '清远市', 1, 215),
-  ('广东省', '441900', '东莞市', 1, 216),
-  ('广东省', '442000', '中山市', 1, 217),
-  ('广东省', '442101', '东沙群岛', 1, 218),
-  ('广东省', '445100', '潮州市', 1, 219),
-  ('广东省', '445200', '揭阳市', 1, 220),
-  ('广东省', '445300', '云浮市', 1, 221),
-  ('广西壮族自治区', '450100', '南宁市', 1, 222),
-  ('广西壮族自治区', '450200', '柳州市', 1, 223),
-  ('广西壮族自治区', '450300', '桂林市', 1, 224),
-  ('广西壮族自治区', '450400', '梧州市', 1, 225),
-  ('广西壮族自治区', '450500', '北海市', 1, 226),
-  ('广西壮族自治区', '450600', '防城港市', 1, 227),
-  ('广西壮族自治区', '450700', '钦州市', 1, 228),
-  ('广西壮族自治区', '450800', '贵港市', 1, 229),
-  ('广西壮族自治区', '450900', '玉林市', 1, 230),
-  ('广西壮族自治区', '451000', '百色市', 1, 231),
-  ('广西壮族自治区', '451100', '贺州市', 1, 232),
-  ('广西壮族自治区', '451200', '河池市', 1, 233),
-  ('广西壮族自治区', '451300', '来宾市', 1, 234),
-  ('广西壮族自治区', '451400', '崇左市', 1, 235),
-  ('海南省', '460100', '海口市', 1, 236),
-  ('海南省', '460200', '三亚市', 1, 237),
-  ('海南省', '460300', '三沙市', 1, 238),
-  ('海南省', '469001', '五指山市', 1, 239),
-  ('海南省', '469002', '琼海市', 1, 240),
-  ('海南省', '469003', '儋州市', 1, 241),
-  ('海南省', '469005', '文昌市', 1, 242),
-  ('海南省', '469006', '万宁市', 1, 243),
-  ('海南省', '469007', '东方市', 1, 244),
-  ('海南省', '469025', '定安县', 1, 245),
-  ('海南省', '469026', '屯昌县', 1, 246),
-  ('海南省', '469027', '澄迈县', 1, 247),
-  ('海南省', '469028', '临高县', 1, 248),
-  ('海南省', '469030', '白沙黎族自治县', 1, 249),
-  ('海南省', '469031', '昌江黎族自治县', 1, 250),
-  ('海南省', '469033', '乐东黎族自治县', 1, 251),
-  ('海南省', '469034', '陵水黎族自治县', 1, 252),
-  ('海南省', '469035', '保亭黎族苗族自治县', 1, 253),
-  ('海南省', '469036', '琼中黎族苗族自治县', 1, 254),
-  ('重庆', '500100', '重庆市', 1, 255),
-  ('四川省', '510100', '成都市', 1, 256),
-  ('四川省', '510300', '自贡市', 1, 257),
-  ('四川省', '510400', '攀枝花市', 1, 258),
-  ('四川省', '510500', '泸州市', 1, 259),
-  ('四川省', '510600', '德阳市', 1, 260),
-  ('四川省', '510700', '绵阳市', 1, 261),
-  ('四川省', '510800', '广元市', 1, 262),
-  ('四川省', '510900', '遂宁市', 1, 263),
-  ('四川省', '511000', '内江市', 1, 264),
-  ('四川省', '511100', '乐山市', 1, 265),
-  ('四川省', '511300', '南充市', 1, 266),
-  ('四川省', '511400', '眉山市', 1, 267),
-  ('四川省', '511500', '宜宾市', 1, 268),
-  ('四川省', '511600', '广安市', 1, 269),
-  ('四川省', '511700', '达州市', 1, 270),
-  ('四川省', '511800', '雅安市', 1, 271),
-  ('四川省', '511900', '巴中市', 1, 272),
-  ('四川省', '512000', '资阳市', 1, 273),
-  ('四川省', '513200', '阿坝藏族羌族自治州', 1, 274),
-  ('四川省', '513300', '甘孜藏族自治州', 1, 275),
-  ('四川省', '513400', '凉山彝族自治州', 1, 276),
-  ('贵州省', '520100', '贵阳市', 1, 277),
-  ('贵州省', '520200', '六盘水市', 1, 278),
-  ('贵州省', '520300', '遵义市', 1, 279),
-  ('贵州省', '520400', '安顺市', 1, 280),
-  ('贵州省', '522200', '铜仁市', 1, 281),
-  ('贵州省', '522300', '黔西南布依族苗族自治州', 1, 282),
-  ('贵州省', '522400', '毕节市', 1, 283),
-  ('贵州省', '522600', '黔东南苗族侗族自治州', 1, 284),
-  ('贵州省', '522700', '黔南布依族苗族自治州', 1, 285),
-  ('云南省', '530100', '昆明市', 1, 286),
-  ('云南省', '530300', '曲靖市', 1, 287),
-  ('云南省', '530400', '玉溪市', 1, 288),
-  ('云南省', '530500', '保山市', 1, 289),
-  ('云南省', '530600', '昭通市', 1, 290),
-  ('云南省', '530700', '丽江市', 1, 291),
-  ('云南省', '530800', '普洱市', 1, 292),
-  ('云南省', '530900', '临沧市', 1, 293),
-  ('云南省', '532300', '楚雄彝族自治州', 1, 294),
-  ('云南省', '532500', '红河哈尼族彝族自治州', 1, 295),
-  ('云南省', '532600', '文山壮族苗族自治州', 1, 296),
-  ('云南省', '532800', '西双版纳傣族自治州', 1, 297),
-  ('云南省', '532900', '大理白族自治州', 1, 298),
-  ('云南省', '533100', '德宏傣族景颇族自治州', 1, 299),
-  ('云南省', '533300', '怒江傈僳族自治州', 1, 300),
-  ('云南省', '533400', '迪庆藏族自治州', 1, 301),
-  ('西藏自治区', '540100', '拉萨市', 1, 302),
-  ('西藏自治区', '542100', '昌都地区', 1, 303),
-  ('西藏自治区', '542200', '山南地区', 1, 304),
-  ('西藏自治区', '542300', '日喀则地区', 1, 305),
-  ('西藏自治区', '542400', '那曲地区', 1, 306),
-  ('西藏自治区', '542500', '阿里地区', 1, 307),
-  ('西藏自治区', '542600', '林芝地区', 1, 308),
-  ('陕西省', '610100', '西安市', 1, 309),
-  ('陕西省', '610200', '铜川市', 1, 310),
-  ('陕西省', '610300', '宝鸡市', 1, 311),
-  ('陕西省', '610400', '咸阳市', 1, 312),
-  ('陕西省', '610500', '渭南市', 1, 313),
-  ('陕西省', '610600', '延安市', 1, 314),
-  ('陕西省', '610700', '汉中市', 1, 315),
-  ('陕西省', '610800', '榆林市', 1, 316),
-  ('陕西省', '610900', '安康市', 1, 317),
-  ('陕西省', '611000', '商洛市', 1, 318),
-  ('甘肃省', '620100', '兰州市', 1, 319),
-  ('甘肃省', '620200', '嘉峪关市', 1, 320),
-  ('甘肃省', '620300', '金昌市', 1, 321),
-  ('甘肃省', '620400', '白银市', 1, 322),
-  ('甘肃省', '620500', '天水市', 1, 323),
-  ('甘肃省', '620600', '武威市', 1, 324),
-  ('甘肃省', '620700', '张掖市', 1, 325),
-  ('甘肃省', '620800', '平凉市', 1, 326),
-  ('甘肃省', '620900', '酒泉市', 1, 327),
-  ('甘肃省', '621000', '庆阳市', 1, 328),
-  ('甘肃省', '621100', '定西市', 1, 329),
-  ('甘肃省', '621200', '陇南市', 1, 330),
-  ('甘肃省', '622900', '临夏回族自治州', 1, 331),
-  ('甘肃省', '623000', '甘南藏族自治州', 1, 332),
-  ('青海省', '630100', '西宁市', 1, 333),
-  ('青海省', '632100', '海东市', 1, 334),
-  ('青海省', '632200', '海北藏族自治州', 1, 335),
-  ('青海省', '632300', '黄南藏族自治州', 1, 336),
-  ('青海省', '632500', '海南藏族自治州', 1, 337),
-  ('青海省', '632600', '果洛藏族自治州', 1, 338),
-  ('青海省', '632700', '玉树藏族自治州', 1, 339),
-  ('青海省', '632800', '海西蒙古族藏族自治州', 1, 340),
-  ('宁夏回族自治区', '640100', '银川市', 1, 341),
-  ('宁夏回族自治区', '640200', '石嘴山市', 1, 342),
-  ('宁夏回族自治区', '640300', '吴忠市', 1, 343),
-  ('宁夏回族自治区', '640400', '固原市', 1, 344),
-  ('宁夏回族自治区', '640500', '中卫市', 1, 345),
-  ('新疆维吾尔自治区', '650100', '乌鲁木齐市', 1, 346),
-  ('新疆维吾尔自治区', '650200', '克拉玛依市', 1, 347),
-  ('新疆维吾尔自治区', '652100', '吐鲁番地区', 1, 348),
-  ('新疆维吾尔自治区', '652200', '哈密地区', 1, 349),
-  ('新疆维吾尔自治区', '652300', '昌吉回族自治州', 1, 350),
-  ('新疆维吾尔自治区', '652700', '博尔塔拉蒙古自治州', 1, 351),
-  ('新疆维吾尔自治区', '652800', '巴音郭楞蒙古自治州', 1, 352),
-  ('新疆维吾尔自治区', '652900', '阿克苏地区', 1, 353),
-  ('新疆维吾尔自治区', '653000', '克孜勒苏柯尔克孜自治州', 1, 354),
-  ('新疆维吾尔自治区', '653100', '喀什地区', 1, 355),
-  ('新疆维吾尔自治区', '653200', '和田地区', 1, 356),
-  ('新疆维吾尔自治区', '654000', '伊犁哈萨克自治州', 1, 357),
-  ('新疆维吾尔自治区', '654200', '塔城地区', 1, 358),
-  ('新疆维吾尔自治区', '654300', '阿勒泰地区', 1, 359),
-  ('新疆维吾尔自治区', '659001', '石河子市', 1, 360),
-  ('新疆维吾尔自治区', '659002', '阿拉尔市', 1, 361),
-  ('新疆维吾尔自治区', '659003', '图木舒克市', 1, 362),
-  ('新疆维吾尔自治区', '659004', '五家渠市', 1, 363),
-  ('台湾', '710100', '台北市', 1, 364),
-  ('台湾', '710200', '高雄市', 1, 365),
-  ('台湾', '710300', '台南市', 1, 366),
-  ('台湾', '710400', '台中市', 1, 367),
-  ('台湾', '710500', '金门县', 1, 368),
-  ('台湾', '710600', '南投县', 1, 369),
-  ('台湾', '710700', '基隆市', 1, 370),
-  ('台湾', '710800', '新竹市', 1, 371),
-  ('台湾', '710900', '嘉义市', 1, 372),
-  ('台湾', '711100', '新北市', 1, 373),
-  ('台湾', '711200', '宜兰县', 1, 374),
-  ('台湾', '711300', '新竹县', 1, 375),
-  ('台湾', '711400', '桃园县', 1, 376),
-  ('台湾', '711500', '苗栗县', 1, 377),
-  ('台湾', '711700', '彰化县', 1, 378),
-  ('台湾', '711900', '嘉义县', 1, 379),
-  ('台湾', '712100', '云林县', 1, 380),
-  ('台湾', '712400', '屏东县', 1, 381),
-  ('台湾', '712500', '台东县', 1, 382),
-  ('台湾', '712600', '花莲县', 1, 383),
-  ('台湾', '712700', '澎湖县', 1, 384),
-  ('台湾', '712800', '连江县', 1, 385),
-  ('香港特别行政区', '810100', '香港岛', 1, 386),
-  ('香港特别行政区', '810200', '九龙', 1, 387),
-  ('香港特别行政区', '810300', '新界', 1, 388),
-  ('澳门特别行政区', '820100', '澳门半岛', 1, 389),
-  ('澳门特别行政区', '820200', '离岛', 1, 390)
-ON DUPLICATE KEY UPDATE
-  `province_name` = VALUES(`province_name`),
-  `city_name` = VALUES(`city_name`),
-  `status` = VALUES(`status`),
-  `sort` = VALUES(`sort`);
+SET NAMES utf8mb4;
+
+DELETE FROM `city_config`;
+
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('北京市', '110100', '北京市', 1, 1);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('天津市', '120100', '天津市', 1, 2);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '130100', '石家庄市', 1, 3);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '130200', '唐山市', 1, 4);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '130300', '秦皇岛市', 1, 5);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '130400', '邯郸市', 1, 6);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '130500', '邢台市', 1, 7);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '130600', '保定市', 1, 8);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '130700', '张家口市', 1, 9);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '130800', '承德市', 1, 10);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '130900', '沧州市', 1, 11);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '131000', '廊坊市', 1, 12);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河北省', '131100', '衡水市', 1, 13);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '140100', '太原市', 1, 14);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '140200', '大同市', 1, 15);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '140300', '阳泉市', 1, 16);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '140400', '长治市', 1, 17);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '140500', '晋城市', 1, 18);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '140600', '朔州市', 1, 19);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '140700', '晋中市', 1, 20);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '140800', '运城市', 1, 21);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '140900', '忻州市', 1, 22);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '141000', '临汾市', 1, 23);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山西省', '141100', '吕梁市', 1, 24);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '150100', '呼和浩特市', 1, 25);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '150200', '包头市', 1, 26);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '150300', '乌海市', 1, 27);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '150400', '赤峰市', 1, 28);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '150500', '通辽市', 1, 29);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '150600', '鄂尔多斯市', 1, 30);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '150700', '呼伦贝尔市', 1, 31);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '150800', '巴彦淖尔市', 1, 32);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '150900', '乌兰察布市', 1, 33);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '152200', '兴安盟', 1, 34);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '152500', '锡林郭勒盟', 1, 35);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('内蒙古自治区', '152900', '阿拉善盟', 1, 36);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '210100', '沈阳市', 1, 37);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '210200', '大连市', 1, 38);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '210300', '鞍山市', 1, 39);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '210400', '抚顺市', 1, 40);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '210500', '本溪市', 1, 41);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '210600', '丹东市', 1, 42);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '210700', '锦州市', 1, 43);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '210800', '营口市', 1, 44);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '210900', '阜新市', 1, 45);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '211000', '辽阳市', 1, 46);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '211100', '盘锦市', 1, 47);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '211200', '铁岭市', 1, 48);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '211300', '朝阳市', 1, 49);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('辽宁省', '211400', '葫芦岛市', 1, 50);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('吉林省', '220100', '长春市', 1, 51);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('吉林省', '220200', '吉林市', 1, 52);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('吉林省', '220300', '四平市', 1, 53);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('吉林省', '220400', '辽源市', 1, 54);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('吉林省', '220500', '通化市', 1, 55);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('吉林省', '220600', '白山市', 1, 56);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('吉林省', '220700', '松原市', 1, 57);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('吉林省', '220800', '白城市', 1, 58);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('吉林省', '222400', '延边朝鲜族自治州', 1, 59);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '230100', '哈尔滨市', 1, 60);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '230200', '齐齐哈尔市', 1, 61);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '230300', '鸡西市', 1, 62);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '230400', '鹤岗市', 1, 63);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '230500', '双鸭山市', 1, 64);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '230600', '大庆市', 1, 65);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '230700', '伊春市', 1, 66);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '230800', '佳木斯市', 1, 67);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '230900', '七台河市', 1, 68);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '231000', '牡丹江市', 1, 69);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '231100', '黑河市', 1, 70);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '231200', '绥化市', 1, 71);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('黑龙江省', '232700', '大兴安岭地区', 1, 72);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('上海市', '310100', '上海市', 1, 73);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '320100', '南京市', 1, 74);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '320200', '无锡市', 1, 75);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '320300', '徐州市', 1, 76);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '320400', '常州市', 1, 77);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '320500', '苏州市', 1, 78);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '320600', '南通市', 1, 79);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '320700', '连云港市', 1, 80);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '320800', '淮安市', 1, 81);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '320900', '盐城市', 1, 82);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '321000', '扬州市', 1, 83);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '321100', '镇江市', 1, 84);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '321200', '泰州市', 1, 85);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江苏省', '321300', '宿迁市', 1, 86);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '330100', '杭州市', 1, 87);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '330200', '宁波市', 1, 88);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '330300', '温州市', 1, 89);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '330400', '嘉兴市', 1, 90);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '330500', '湖州市', 1, 91);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '330600', '绍兴市', 1, 92);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '330700', '金华市', 1, 93);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '330800', '衢州市', 1, 94);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '330900', '舟山市', 1, 95);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '331000', '台州市', 1, 96);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('浙江省', '331100', '丽水市', 1, 97);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '340100', '合肥市', 1, 98);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '340200', '芜湖市', 1, 99);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '340300', '蚌埠市', 1, 100);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '340400', '淮南市', 1, 101);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '340500', '马鞍山市', 1, 102);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '340600', '淮北市', 1, 103);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '340700', '铜陵市', 1, 104);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '340800', '安庆市', 1, 105);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '341000', '黄山市', 1, 106);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '341100', '滁州市', 1, 107);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '341200', '阜阳市', 1, 108);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '341300', '宿州市', 1, 109);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '341500', '六安市', 1, 110);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '341600', '亳州市', 1, 111);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '341700', '池州市', 1, 112);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('安徽省', '341800', '宣城市', 1, 113);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('福建省', '350100', '福州市', 1, 114);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('福建省', '350200', '厦门市', 1, 115);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('福建省', '350300', '莆田市', 1, 116);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('福建省', '350400', '三明市', 1, 117);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('福建省', '350500', '泉州市', 1, 118);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('福建省', '350600', '漳州市', 1, 119);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('福建省', '350700', '南平市', 1, 120);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('福建省', '350800', '龙岩市', 1, 121);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('福建省', '350900', '宁德市', 1, 122);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '360100', '南昌市', 1, 123);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '360200', '景德镇市', 1, 124);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '360300', '萍乡市', 1, 125);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '360400', '九江市', 1, 126);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '360500', '新余市', 1, 127);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '360600', '鹰潭市', 1, 128);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '360700', '赣州市', 1, 129);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '360800', '吉安市', 1, 130);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '360900', '宜春市', 1, 131);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '361000', '抚州市', 1, 132);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('江西省', '361100', '上饶市', 1, 133);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '370100', '济南市', 1, 134);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '370200', '青岛市', 1, 135);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '370300', '淄博市', 1, 136);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '370400', '枣庄市', 1, 137);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '370500', '东营市', 1, 138);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '370600', '烟台市', 1, 139);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '370700', '潍坊市', 1, 140);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '370800', '济宁市', 1, 141);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '370900', '泰安市', 1, 142);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '371000', '威海市', 1, 143);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '371100', '日照市', 1, 144);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '371300', '临沂市', 1, 145);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '371400', '德州市', 1, 146);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '371500', '聊城市', 1, 147);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '371600', '滨州市', 1, 148);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('山东省', '371700', '菏泽市', 1, 149);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '410100', '郑州市', 1, 150);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '410200', '开封市', 1, 151);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '410300', '洛阳市', 1, 152);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '410400', '平顶山市', 1, 153);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '410500', '安阳市', 1, 154);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '410600', '鹤壁市', 1, 155);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '410700', '新乡市', 1, 156);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '410800', '焦作市', 1, 157);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '410900', '濮阳市', 1, 158);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '411000', '许昌市', 1, 159);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '411100', '漯河市', 1, 160);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '411200', '三门峡市', 1, 161);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '411300', '南阳市', 1, 162);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '411400', '商丘市', 1, 163);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '411500', '信阳市', 1, 164);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '411600', '周口市', 1, 165);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '411700', '驻马店市', 1, 166);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('河南省', '419001', '济源市', 1, 167);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '420100', '武汉市', 1, 168);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '420200', '黄石市', 1, 169);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '420300', '十堰市', 1, 170);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '420500', '宜昌市', 1, 171);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '420600', '襄阳市', 1, 172);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '420700', '鄂州市', 1, 173);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '420800', '荆门市', 1, 174);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '420900', '孝感市', 1, 175);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '421000', '荆州市', 1, 176);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '421100', '黄冈市', 1, 177);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '421200', '咸宁市', 1, 178);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '421300', '随州市', 1, 179);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '422800', '恩施土家族苗族自治州', 1, 180);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '429004', '仙桃市', 1, 181);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '429005', '潜江市', 1, 182);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '429006', '天门市', 1, 183);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖北省', '429021', '神农架林区', 1, 184);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '430100', '长沙市', 1, 185);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '430200', '株洲市', 1, 186);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '430300', '湘潭市', 1, 187);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '430400', '衡阳市', 1, 188);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '430500', '邵阳市', 1, 189);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '430600', '岳阳市', 1, 190);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '430700', '常德市', 1, 191);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '430800', '张家界市', 1, 192);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '430900', '益阳市', 1, 193);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '431000', '郴州市', 1, 194);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '431100', '永州市', 1, 195);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '431200', '怀化市', 1, 196);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '431300', '娄底市', 1, 197);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('湖南省', '433100', '湘西土家族苗族自治州', 1, 198);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '440100', '广州市', 1, 199);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '440200', '韶关市', 1, 200);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '440300', '深圳市', 1, 201);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '440400', '珠海市', 1, 202);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '440500', '汕头市', 1, 203);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '440600', '佛山市', 1, 204);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '440700', '江门市', 1, 205);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '440800', '湛江市', 1, 206);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '440900', '茂名市', 1, 207);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '441200', '肇庆市', 1, 208);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '441300', '惠州市', 1, 209);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '441400', '梅州市', 1, 210);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '441500', '汕尾市', 1, 211);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '441600', '河源市', 1, 212);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '441700', '阳江市', 1, 213);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '441800', '清远市', 1, 214);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '441900', '东莞市', 1, 215);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '442000', '中山市', 1, 216);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '442100', '东沙群岛', 1, 217);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '445100', '潮州市', 1, 218);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '445200', '揭阳市', 1, 219);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广东省', '445300', '云浮市', 1, 220);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '450100', '南宁市', 1, 221);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '450200', '柳州市', 1, 222);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '450300', '桂林市', 1, 223);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '450400', '梧州市', 1, 224);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '450500', '北海市', 1, 225);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '450600', '防城港市', 1, 226);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '450700', '钦州市', 1, 227);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '450800', '贵港市', 1, 228);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '450900', '玉林市', 1, 229);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '451000', '百色市', 1, 230);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '451100', '贺州市', 1, 231);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '451200', '河池市', 1, 232);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '451300', '来宾市', 1, 233);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('广西壮族自治区', '451400', '崇左市', 1, 234);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '460100', '海口市', 1, 235);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '460200', '三亚市', 1, 236);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '460300', '三沙市', 1, 237);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '460400', '儋州市', 1, 238);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469001', '五指山市', 1, 239);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469002', '琼海市', 1, 240);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469005', '文昌市', 1, 241);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469006', '万宁市', 1, 242);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469007', '东方市', 1, 243);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469021', '定安县', 1, 244);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469022', '屯昌县', 1, 245);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469023', '澄迈县', 1, 246);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469024', '临高县', 1, 247);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469025', '白沙黎族自治县', 1, 248);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469026', '昌江黎族自治县', 1, 249);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469027', '乐东黎族自治县', 1, 250);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469028', '陵水黎族自治县', 1, 251);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469029', '保亭黎族苗族自治县', 1, 252);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('海南省', '469030', '琼中黎族苗族自治县', 1, 253);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('重庆市', '500100', '重庆市', 1, 254);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '510100', '成都市', 1, 255);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '510300', '自贡市', 1, 256);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '510400', '攀枝花市', 1, 257);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '510500', '泸州市', 1, 258);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '510600', '德阳市', 1, 259);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '510700', '绵阳市', 1, 260);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '510800', '广元市', 1, 261);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '510900', '遂宁市', 1, 262);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '511000', '内江市', 1, 263);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '511100', '乐山市', 1, 264);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '511300', '南充市', 1, 265);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '511400', '眉山市', 1, 266);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '511500', '宜宾市', 1, 267);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '511600', '广安市', 1, 268);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '511700', '达州市', 1, 269);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '511800', '雅安市', 1, 270);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '511900', '巴中市', 1, 271);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '512000', '资阳市', 1, 272);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '513200', '阿坝藏族羌族自治州', 1, 273);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '513300', '甘孜藏族自治州', 1, 274);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('四川省', '513400', '凉山彝族自治州', 1, 275);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('贵州省', '520100', '贵阳市', 1, 276);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('贵州省', '520200', '六盘水市', 1, 277);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('贵州省', '520300', '遵义市', 1, 278);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('贵州省', '520400', '安顺市', 1, 279);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('贵州省', '520500', '毕节市', 1, 280);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('贵州省', '520600', '铜仁市', 1, 281);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('贵州省', '522300', '黔西南布依族苗族自治州', 1, 282);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('贵州省', '522600', '黔东南苗族侗族自治州', 1, 283);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('贵州省', '522700', '黔南布依族苗族自治州', 1, 284);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '530100', '昆明市', 1, 285);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '530300', '曲靖市', 1, 286);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '530400', '玉溪市', 1, 287);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '530500', '保山市', 1, 288);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '530600', '昭通市', 1, 289);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '530700', '丽江市', 1, 290);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '530800', '普洱市', 1, 291);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '530900', '临沧市', 1, 292);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '532300', '楚雄彝族自治州', 1, 293);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '532500', '红河哈尼族彝族自治州', 1, 294);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '532600', '文山壮族苗族自治州', 1, 295);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '532800', '西双版纳傣族自治州', 1, 296);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '532900', '大理白族自治州', 1, 297);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '533100', '德宏傣族景颇族自治州', 1, 298);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '533300', '怒江傈僳族自治州', 1, 299);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('云南省', '533400', '迪庆藏族自治州', 1, 300);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('西藏自治区', '540100', '拉萨市', 1, 301);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('西藏自治区', '540200', '日喀则市', 1, 302);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('西藏自治区', '540300', '昌都市', 1, 303);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('西藏自治区', '540400', '林芝市', 1, 304);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('西藏自治区', '540500', '山南市', 1, 305);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('西藏自治区', '540600', '那曲市', 1, 306);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('西藏自治区', '542500', '阿里地区', 1, 307);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '610100', '西安市', 1, 308);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '610200', '铜川市', 1, 309);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '610300', '宝鸡市', 1, 310);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '610400', '咸阳市', 1, 311);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '610500', '渭南市', 1, 312);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '610600', '延安市', 1, 313);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '610700', '汉中市', 1, 314);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '610800', '榆林市', 1, 315);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '610900', '安康市', 1, 316);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('陕西省', '611000', '商洛市', 1, 317);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '620100', '兰州市', 1, 318);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '620200', '嘉峪关市', 1, 319);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '620300', '金昌市', 1, 320);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '620400', '白银市', 1, 321);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '620500', '天水市', 1, 322);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '620600', '武威市', 1, 323);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '620700', '张掖市', 1, 324);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '620800', '平凉市', 1, 325);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '620900', '酒泉市', 1, 326);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '621000', '庆阳市', 1, 327);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '621100', '定西市', 1, 328);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '621200', '陇南市', 1, 329);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '622900', '临夏回族自治州', 1, 330);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('甘肃省', '623000', '甘南藏族自治州', 1, 331);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('青海省', '630100', '西宁市', 1, 332);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('青海省', '630200', '海东市', 1, 333);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('青海省', '632200', '海北藏族自治州', 1, 334);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('青海省', '632300', '黄南藏族自治州', 1, 335);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('青海省', '632500', '海南藏族自治州', 1, 336);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('青海省', '632600', '果洛藏族自治州', 1, 337);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('青海省', '632700', '玉树藏族自治州', 1, 338);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('青海省', '632800', '海西蒙古族藏族自治州', 1, 339);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('宁夏回族自治区', '640100', '银川市', 1, 340);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('宁夏回族自治区', '640200', '石嘴山市', 1, 341);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('宁夏回族自治区', '640300', '吴忠市', 1, 342);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('宁夏回族自治区', '640400', '固原市', 1, 343);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('宁夏回族自治区', '640500', '中卫市', 1, 344);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '650100', '乌鲁木齐市', 1, 345);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '650200', '克拉玛依市', 1, 346);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '650400', '吐鲁番市', 1, 347);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '650500', '哈密市', 1, 348);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '652300', '昌吉回族自治州', 1, 349);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '652700', '博尔塔拉蒙古自治州', 1, 350);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '652800', '巴音郭楞蒙古自治州', 1, 351);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '652900', '阿克苏地区', 1, 352);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '653000', '克孜勒苏柯尔克孜自治州', 1, 353);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '653100', '喀什地区', 1, 354);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '653200', '和田地区', 1, 355);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '654000', '伊犁哈萨克自治州', 1, 356);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '654200', '塔城地区', 1, 357);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '654300', '阿勒泰地区', 1, 358);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659001', '石河子市', 1, 359);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659002', '阿拉尔市', 1, 360);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659003', '图木舒克市', 1, 361);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659004', '五家渠市', 1, 362);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659005', '北屯市', 1, 363);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659006', '铁门关市', 1, 364);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659007', '双河市', 1, 365);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659008', '可克达拉市', 1, 366);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659009', '昆玉市', 1, 367);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('新疆维吾尔自治区', '659010', '胡杨河市', 1, 368);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('台湾省', '710000', '台湾省', 1, 369);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('香港特别行政区', '810000', '香港', 1, 370);
+INSERT INTO `city_config` (`province_name`, `city_code`, `city_name`, `status`, `sort`) VALUES ('澳门特别行政区', '820000', '澳门', 1, 371);

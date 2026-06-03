@@ -22,6 +22,10 @@ public class InstitutionSaveDTO implements Serializable {
     @NotBlank(message = "merchant type is required")
     private String merchantType;
 
+    @NotBlank(message = "channel type is required")
+    private String channelType;
+
+    private String businessOwner;
     private String remark;
     private String adminPhone;
     private String adminName;

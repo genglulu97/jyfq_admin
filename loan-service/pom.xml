@@ -15,6 +15,18 @@
     <description>核心业务模块：撞库匹配、推单、回调处理、计费</description>
 
     <dependencies>
+        <!-- loan-common -->
+        <dependency>
+            <groupId>com.jyfq</groupId>
+            <artifactId>loan-common</artifactId>
+        </dependency>
+
+        <!-- loan-model -->
+        <dependency>
+            <groupId>com.jyfq</groupId>
+            <artifactId>loan-model</artifactId>
+        </dependency>
+
         <!-- loan-mapper -->
         <dependency>
             <groupId>com.jyfq</groupId>

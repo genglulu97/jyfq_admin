@@ -24,6 +24,7 @@ public class Channel {
     private String channelCode;
     private String channelName;
     private String channelType;
+    private String h5Url;
     private String businessOwner;
     private Integer dailyQuota;
     private Integer normalRecommend;
@@ -40,6 +41,9 @@ public class Channel {
     private String settlementMode;
     private String extJson;
     private BigDecimal feeRate;
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
+    private String priceReturnMode;
     private Integer status;
     private String remark;
 

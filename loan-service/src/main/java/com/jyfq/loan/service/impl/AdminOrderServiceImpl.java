@@ -29,7 +29,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -152,7 +151,9 @@ public class AdminOrderServiceImpl implements AdminOrderService {
             wrapper.eq(ApplyOrder::getChannelCode, query.getChannelCode().trim());
         }
         if (StringUtils.hasText(query.getCustomerLevel())) {
-            wrapper.eq(ApplyOrder::getCustomerLevel, query.getCustomerLevel().trim());
+            String customerLevel = normalizeCustomerLevel(query.getCustomerLevel());
+            wrapper.eq(ApplyOrder::getCustomerLevel,
+                    customerLevel == null ? query.getCustomerLevel().trim() : customerLevel);
         }
         if (StringUtils.hasText(query.getCityKeyword())) {
             String cityKeyword = query.getCityKeyword().trim();
@@ -165,13 +166,9 @@ public class AdminOrderServiceImpl implements AdminOrderService {
                 .isNotNull(ApplyOrder::getProductId)
                 .isNotNull(ApplyOrder::getPushId);
         if (query.getOrderStatus() != null) {
-            if (Objects.equals(query.getOrderStatus(), 9)) {
-                wrapper.isNull(ApplyOrder::getId);
-            } else {
-                wrapper.eq(ApplyOrder::getOrderStatus, query.getOrderStatus());
-            }
+            wrapper.eq(ApplyOrder::getOrderStatus, query.getOrderStatus());
         } else {
-            wrapper.in(ApplyOrder::getOrderStatus, 1, 2, 3);
+            wrapper.in(ApplyOrder::getOrderStatus, 1, 9);
         }
         if (query.getStartTime() != null) {
             wrapper.ge(ApplyOrder::getCreatedAt, query.getStartTime());
@@ -306,6 +303,7 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         vo.setOrderStatus(order.getOrderStatus());
         vo.setOrderStatusDesc(resolveOrderStatusDesc(order.getOrderStatus()));
         vo.setApplyStatusDesc(resolveApplyStatusDesc(order.getOrderStatus()));
+        vo.setRejectReason(resolveRejectReason(order, latestPushRecord));
         vo.setPushStatus(latestPushRecord == null ? null : latestPushRecord.getPushStatus());
         vo.setPushStatusDesc(latestPushRecord == null ? "-" : resolvePushStatusDesc(latestPushRecord.getPushStatus()));
         vo.setThirdOrderNo(latestPushRecord == null ? null : latestPushRecord.getThirdOrderNo());
@@ -404,10 +402,7 @@ public class AdminOrderServiceImpl implements AdminOrderService {
             return "-";
         }
         return switch (orderStatus) {
-            case 0 -> "\u5f85\u8fdb\u4ef6";
             case 1 -> "\u8fdb\u4ef6\u6210\u529f";
-            case 2 -> "\u6388\u4fe1\u4e2d";
-            case 3 -> "\u5df2\u653e\u6b3e";
             case 9 -> "\u8fdb\u4ef6\u5931\u8d25";
             default -> String.valueOf(orderStatus);
         };
@@ -433,49 +428,38 @@ public class AdminOrderServiceImpl implements AdminOrderService {
     }
 
     private String resolveCustomerLevel(ApplyOrder order) {
-        if (StringUtils.hasText(order.getCustomerLevel())) {
-            return order.getCustomerLevel();
-        }
+        String normalizedLevel = normalizeCustomerLevel(order.getCustomerLevel());
+        return normalizedLevel == null ? "-" : normalizedLevel;
+    }
 
-        List<Integer> indicators = new ArrayList<>();
-        indicators.add(order.getHouse());
-        indicators.add(order.getVehicle());
-        indicators.add(order.getProvidentFund());
-        indicators.add(order.getSocialSecurity());
-        indicators.add(order.getCommercialInsurance());
-        if (indicators.stream().allMatch(Objects::isNull) && order.getZhima() == null && order.getOverdue() == null) {
-            return "-";
+    private String normalizeCustomerLevel(String customerLevel) {
+        if (!StringUtils.hasText(customerLevel)) {
+            return null;
         }
+        String value = customerLevel.trim().replaceAll("\\s+", "");
+        if (value.matches("[1-5]")) {
+            return value;
+        }
+        if (value.matches("[1-5]星")) {
+            return value.substring(0, 1);
+        }
+        return null;
+    }
 
-        int score = 0;
-        if (Objects.equals(order.getHouse(), 1)) {
-            score += 2;
+    private String resolveRejectReason(ApplyOrder order, PushRecord latestPushRecord) {
+        boolean orderFailed = order != null && Integer.valueOf(9).equals(order.getOrderStatus());
+        boolean pushFailed = latestPushRecord != null && latestPushRecord.getPushStatus() != null
+                && latestPushRecord.getPushStatus() >= 4;
+        if (!orderFailed && !pushFailed) {
+            return null;
         }
-        if (Objects.equals(order.getVehicle(), 1)) {
-            score += 2;
+        if (StringUtils.hasText(order.getRejectReason())) {
+            return order.getRejectReason();
         }
-        if (Objects.equals(order.getProvidentFund(), 1)) {
-            score += 1;
+        if (latestPushRecord != null && StringUtils.hasText(latestPushRecord.getErrorMsg())) {
+            return latestPushRecord.getErrorMsg();
         }
-        if (Objects.equals(order.getSocialSecurity(), 1)) {
-            score += 1;
-        }
-        if (Objects.equals(order.getCommercialInsurance(), 1)) {
-            score += 1;
-        }
-        if (order.getZhima() != null) {
-            if (order.getZhima() >= 700) {
-                score += 2;
-            } else if (order.getZhima() >= 650) {
-                score += 1;
-            }
-        }
-        if (Objects.equals(order.getOverdue(), 1)) {
-            score += 1;
-        }
-
-        int stars = Math.max(1, Math.min(5, (score + 1) / 2));
-        return stars + "星";
+        return null;
     }
 
     private String resolveGender(Integer gender) {

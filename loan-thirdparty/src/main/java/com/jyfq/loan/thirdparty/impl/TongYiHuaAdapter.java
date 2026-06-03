@@ -38,31 +38,56 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
                     .build();
         }
 
-        JSONObject plainPayload = buildPreCheckPayload(req);
-        JSONObject envelope = buildEncryptedEnvelope(institution, plainPayload);
-        logWrappedRequest(institution, preCheckUrl, plainPayload, envelope);
+        String requestLog = null;
+        String responseLog = null;
+        try {
+            JSONObject plainPayload = buildPreCheckPayload(req);
+            JSONObject envelope = buildEncryptedEnvelope(institution, plainPayload);
+            requestLog = buildPreCheckRequestLog(plainPayload, envelope);
+            logWrappedRequest("掩码全流程", institution, req.getProductId(), preCheckUrl, plainPayload, envelope);
 
-        JSONObject resp = doPlainPost(institution, preCheckUrl, envelope, JSONObject.class);
-        if (isSuccess(resp)) {
-            JSONObject resultData = resolveResultData(resp);
+            long start = System.currentTimeMillis();
+            JSONObject resp = doPlainPost(institution, preCheckUrl, envelope, JSONObject.class);
+            responseLog = toJson(resp);
+            logWrappedResponse("掩码全流程", institution, req.getProductId(), plainPayload, resp, System.currentTimeMillis() - start);
+            if (isSuccess(resp)) {
+                JSONObject resultData = resolveResultData(resp);
+                return PreCheckResult.builder()
+                        .pass(true)
+                        .instCode(institution.getInstCode())
+                        .price(resolvePrice(resultData, resp))
+                        .uuid(resolveText(resultData, resp, "uuid", "requestId", "traceId", "orderId"))
+                        .orderId(resolveText(resultData, resp, "orderId", "requestId", "traceId"))
+                        .productLogo(resolveText(resultData, resp, "productLogo"))
+                        .productName(resolveText(resultData, resp, "productName"))
+                        .companyName(resolveText(resultData, resp, "companyName"))
+                        .protocolList(resolveProtocolList(resultData, resp))
+                        .requestLog(requestLog)
+                        .responseLog(responseLog)
+                        .build();
+            }
+
             return PreCheckResult.builder()
-                    .pass(true)
-                    .instCode(institution.getInstCode())
-                    .price(resolvePrice(resultData, resp))
-                    .uuid(resolveText(resultData, resp, "uuid", "requestId", "traceId", "orderId"))
-                    .orderId(resolveText(resultData, resp, "orderId", "requestId", "traceId"))
-                    .productLogo(resolveText(resultData, resp, "productLogo"))
-                    .productName(resolveText(resultData, resp, "productName"))
-                    .companyName(resolveText(resultData, resp, "companyName"))
-                    .protocolList(resolveProtocolList(resultData, resp))
+                    .pass(false)
+                    .instCode(institution == null ? null : institution.getInstCode())
+                    .rejectReason(resolveText(resolveResultData(resp), resp, "msg", "message", "errorMsg"))
+                    .requestLog(requestLog)
+                    .responseLog(responseLog)
+                    .build();
+        } catch (Exception e) {
+            log.warn("[PRECHECK] downstream preCheck error, instCode={}, productId={}, url={}, error={}",
+                    institution == null ? null : institution.getInstCode(),
+                    req == null ? null : req.getProductId(),
+                    preCheckUrl,
+                    e.getMessage());
+            return PreCheckResult.builder()
+                    .pass(false)
+                    .instCode(institution == null ? null : institution.getInstCode())
+                    .rejectReason("downstream error: " + e.getMessage())
+                    .requestLog(requestLog)
+                    .responseLog(responseLog)
                     .build();
         }
-
-        return PreCheckResult.builder()
-                .pass(false)
-                .instCode(institution == null ? null : institution.getInstCode())
-                .rejectReason(resolveText(resolveResultData(resp), resp, "msg", "message", "errorMsg"))
-                .build();
     }
 
     @Override
@@ -75,9 +100,11 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
         try {
             JSONObject plainPayload = buildPushPayload(req);
             JSONObject envelope = buildEncryptedEnvelope(institution, plainPayload);
-            logWrappedRequest(institution, institution.getApiPushUrl(), plainPayload, envelope);
+            logWrappedRequest("推单", institution, req.getProductId(), institution.getApiPushUrl(), plainPayload, envelope);
 
+            long start = System.currentTimeMillis();
             JSONObject resp = doPlainPost(institution, institution.getApiPushUrl(), envelope, JSONObject.class);
+            logWrappedResponse("推单", institution, req.getProductId(), plainPayload, resp, System.currentTimeMillis() - start);
             JSONObject resultData = resolveResultData(resp);
             if (isSuccess(resp)) {
                 PushResult result = PushResult.success(resolvePushMessage(resultData, resp));
@@ -101,6 +128,7 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
         payload.put("phoneMd5", normalizePhoneMd5(req.getPhoneMd5(), req.getPhone()));
         payload.put("city", resolveCityName(req.getWorkCity(), req.getCityCode()));
         payload.put("cityCode", req.getCityCode());
+        payload.put("idCardPrefixFour", req.getIdCardPrefixFour());
         payload.put("age", req.getAge());
         payload.put("gender", normalizeGender(req.getGender()));
         payload.put("loanTime", normalizeLoanTime(req.getLoanTime()));
@@ -145,7 +173,6 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
             payload.put("overdue", normalizeOverdue(req.getStandardData().getOverdue()));
             payload.put("loanAmount", normalizeLoanAmount(req.getStandardData().getLoanAmount()));
             payload.put("loanTime", normalizeLoanTime(req.getStandardData().getLoanTime()));
-            payload.put("customerLevel", req.getStandardData().getCustomerLevel());
             payload.put("ip", req.getStandardData().getIp());
         }
         return payload;
@@ -160,16 +187,61 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
         return envelope;
     }
 
-    private void logWrappedRequest(Institution institution, String url, JSONObject plainPayload, JSONObject envelope) {
-        log.info("[PUSH] downstream request prepared | adapter={} | instCode={} | url={} | encryptType={} | key={} | plainJson={} | encryptedData={} | envelope={}",
-                getAdapterKey(),
-                institution == null ? null : institution.getInstCode(),
+    private String buildPreCheckRequestLog(JSONObject plainPayload, JSONObject envelope) {
+        JSONObject payload = new JSONObject();
+        payload.put("plainPayload", plainPayload);
+        payload.put("requestPayload", envelope);
+        return toJson(payload);
+    }
+
+    private String toJson(Object value) {
+        return value == null ? null : JSON.toJSONString(value);
+    }
+
+    private void logWrappedRequest(String operation, Institution institution, Long productId,
+                                   String url, JSONObject plainPayload, JSONObject envelope) {
+        String title = buildLogTitle(institution, operation);
+        log.info("{}MD5:【{}】，产品：{}，机构：{}，请求地址：{}，加密方式：{}，撞库前未加密参数：{}",
+                title,
+                plainPayload.getString("phoneMd5"),
+                productId,
+                institution == null ? null : institution.getId(),
                 url,
                 resolveEncryptTypeLabel(institution),
-                institution == null ? null : institution.getAppKey(),
-                JSON.toJSONString(plainPayload),
-                envelope.getString("data"),
+                JSON.toJSONString(plainPayload));
+        log.info("{}MD5:【{}】，产品：{}，机构：{}，撞库参数：{}",
+                title,
+                plainPayload.getString("phoneMd5"),
+                productId,
+                institution == null ? null : institution.getId(),
                 JSON.toJSONString(envelope));
+    }
+
+    private void logWrappedResponse(String operation, Institution institution, Long productId,
+                                    JSONObject plainPayload, JSONObject resp, long costMs) {
+        String title = buildLogTitle(institution, operation);
+        if (isSuccess(resp)) {
+            log.info("{}MD5:【{}】，产品：{}，机构：{}，耗时：{}ms，撞库返回值：{}",
+                    title,
+                    plainPayload.getString("phoneMd5"),
+                    productId,
+                    institution == null ? null : institution.getId(),
+                    costMs,
+                    JSON.toJSONString(resp));
+        } else {
+            log.warn("{}MD5:【{}】，产品：{}，机构：{}，耗时：{}ms，撞库返回值：{}",
+                    title,
+                    plainPayload.getString("phoneMd5"),
+                    productId,
+                    institution == null ? null : institution.getId(),
+                    costMs,
+                    JSON.toJSONString(resp));
+        }
+    }
+
+    private String buildLogTitle(Institution institution, String operation) {
+        String instName = institution == null ? "未知机构" : defaultText(institution.getInstName(), institution.getMerchantAlias());
+        return "【" + instName + " " + operation + "】";
     }
 
     private String encryptForTongYiHua(Institution institution, String plainJson) {
@@ -295,7 +367,10 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
             return 3;
         }
         return switch (value) {
-            case 0, 1, 2, 3 -> value;
+            case 1 -> 0;
+            case 2 -> 1;
+            case 3 -> 2;
+            case 0 -> 3;
             default -> 3;
         };
     }
@@ -403,5 +478,9 @@ public class TongYiHuaAdapter extends AbstractInstitutionAdapter {
             }
         }
         return null;
+    }
+
+    private String defaultText(String value, String fallback) {
+        return StringUtils.hasText(value) ? value : fallback;
     }
 }

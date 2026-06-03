@@ -16,7 +16,7 @@ ALTER TABLE `apply_order`
   ADD COLUMN IF NOT EXISTS `overdue` TINYINT DEFAULT NULL COMMENT 'Overdue status',
   ADD COLUMN IF NOT EXISTS `loan_amount` INT DEFAULT NULL COMMENT 'Requested loan amount',
   ADD COLUMN IF NOT EXISTS `loan_time` INT DEFAULT NULL COMMENT 'Loan term',
-  ADD COLUMN IF NOT EXISTS `customer_level` VARCHAR(32) DEFAULT NULL COMMENT 'Customer level',
+  ADD COLUMN IF NOT EXISTS `customer_level` VARCHAR(32) DEFAULT NULL COMMENT 'Downstream returned customer star level',
   ADD COLUMN IF NOT EXISTS `settlement_price` DECIMAL(10,2) DEFAULT NULL COMMENT 'Winning settlement price',
   ADD COLUMN IF NOT EXISTS `follow_salesman` VARCHAR(64) DEFAULT NULL COMMENT 'Assigned salesman',
   ADD COLUMN IF NOT EXISTS `salesman_rating` TINYINT DEFAULT NULL COMMENT 'Salesman rating',
@@ -27,6 +27,7 @@ ALTER TABLE `apply_order`
 ALTER TABLE `channel`
   ADD COLUMN IF NOT EXISTS `channel_id` VARCHAR(64) DEFAULT NULL COMMENT 'Business channel id',
   ADD COLUMN IF NOT EXISTS `channel_type` VARCHAR(64) DEFAULT NULL COMMENT 'Channel type',
+  ADD COLUMN IF NOT EXISTS `h5_url` VARCHAR(1024) DEFAULT NULL COMMENT 'H5 link URL',
   ADD COLUMN IF NOT EXISTS `business_owner` VARCHAR(64) DEFAULT NULL COMMENT 'Business owner',
   ADD COLUMN IF NOT EXISTS `daily_quota` INT NOT NULL DEFAULT 10000 COMMENT 'Daily quota',
   ADD COLUMN IF NOT EXISTS `normal_recommend` TINYINT NOT NULL DEFAULT 0 COMMENT 'Normal recommend flag',

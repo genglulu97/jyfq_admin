@@ -34,6 +34,7 @@ public class OrderListVO implements Serializable {
     private Integer orderStatus;
     private String orderStatusDesc;
     private String applyStatusDesc;
+    private String rejectReason;
     private Integer pushStatus;
     private String pushStatusDesc;
     private String thirdOrderNo;

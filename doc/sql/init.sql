@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS `channel` (
   `channel_code` VARCHAR(32) NOT NULL UNIQUE COMMENT 'Channel code',
   `channel_name` VARCHAR(64) NOT NULL COMMENT 'Channel name',
   `channel_type` VARCHAR(64) DEFAULT NULL COMMENT 'Channel type',
+  `h5_url` VARCHAR(1024) DEFAULT NULL COMMENT 'H5 link URL',
   `business_owner` VARCHAR(64) DEFAULT NULL COMMENT 'Business owner',
   `daily_quota` INT NOT NULL DEFAULT 10000 COMMENT 'Daily quota',
   `normal_recommend` TINYINT NOT NULL DEFAULT 0 COMMENT 'Normal recommend flag',
@@ -32,6 +33,9 @@ CREATE TABLE IF NOT EXISTS `channel` (
   `settlement_mode` VARCHAR(32) DEFAULT NULL COMMENT 'Settlement mode',
   `ext_json` TEXT DEFAULT NULL COMMENT 'Extension JSON',
   `fee_rate` DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT 'Settlement amount/rate',
+  `min_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Minimum response price for this channel',
+  `max_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Maximum response price for this channel',
+  `price_return_mode` VARCHAR(32) NOT NULL DEFAULT 'BEFORE_PROFIT' COMMENT 'BEFORE_PROFIT or AFTER_PROFIT',
   `status` TINYINT NOT NULL DEFAULT 1 COMMENT '1 enabled, 0 disabled',
   `remark` VARCHAR(255) DEFAULT NULL COMMENT 'Remark',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -40,12 +44,35 @@ CREATE TABLE IF NOT EXISTS `channel` (
   INDEX `idx_channel_code` (`channel_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Upstream channel config';
 
+CREATE TABLE IF NOT EXISTS `h5_promotion_event` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `channel_id` BIGINT NOT NULL COMMENT 'Channel ID',
+  `channel_code` VARCHAR(32) NOT NULL COMMENT 'Channel code snapshot',
+  `event_type` VARCHAR(32) NOT NULL COMMENT 'PV, CLICK, REGISTER, COMPLETE',
+  `visitor_id` VARCHAR(64) DEFAULT NULL COMMENT 'Visitor ID',
+  `session_id` VARCHAR(64) DEFAULT NULL COMMENT 'Session ID',
+  `page_url` VARCHAR(1024) DEFAULT NULL COMMENT 'Page URL',
+  `referer` VARCHAR(1024) DEFAULT NULL COMMENT 'Referer',
+  `user_agent` VARCHAR(512) DEFAULT NULL COMMENT 'User agent',
+  `device_ip` VARCHAR(45) DEFAULT NULL COMMENT 'Client IP',
+  `ext_json` TEXT DEFAULT NULL COMMENT 'Extension JSON',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `create_by` VARCHAR(64) DEFAULT NULL,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `update_by` VARCHAR(64) DEFAULT NULL,
+  INDEX `idx_h5_event_channel_time` (`channel_id`, `created_at`),
+  INDEX `idx_h5_event_code_time` (`channel_code`, `created_at`),
+  INDEX `idx_h5_event_type_time` (`event_type`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='H5 promotion event';
+
 CREATE TABLE IF NOT EXISTS `institution` (
   `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
   `inst_code` VARCHAR(32) NOT NULL UNIQUE COMMENT 'Institution code',
   `inst_name` VARCHAR(64) NOT NULL COMMENT 'Institution name',
   `merchant_alias` VARCHAR(64) DEFAULT NULL COMMENT 'Merchant alias',
   `merchant_type` VARCHAR(32) DEFAULT NULL COMMENT 'Merchant type',
+  `channel_type` VARCHAR(64) NOT NULL DEFAULT '全流程API-CPS' COMMENT 'Channel type for matching',
+  `business_owner` VARCHAR(64) DEFAULT NULL COMMENT 'Business owner',
   `business_code` VARCHAR(64) DEFAULT NULL COMMENT 'Partner business code',
   `pre_check_url` VARCHAR(256) DEFAULT NULL COMMENT 'Pre-check API URL',
   `api_push_url` VARCHAR(256) NOT NULL COMMENT 'Push API URL',
@@ -159,18 +186,56 @@ CREATE TABLE IF NOT EXISTS `collision_record` (
   `overdue` TINYINT DEFAULT NULL COMMENT 'Overdue status',
   `loan_amount` INT DEFAULT NULL COMMENT 'Requested loan amount',
   `loan_time` INT DEFAULT NULL COMMENT 'Loan term',
-  `customer_level` VARCHAR(32) DEFAULT NULL COMMENT 'Customer level',
+  `customer_level` VARCHAR(32) DEFAULT NULL COMMENT 'Downstream returned customer star level',
   `device_ip` VARCHAR(45) DEFAULT NULL COMMENT 'Device IP',
   `collision_status` TINYINT NOT NULL DEFAULT 0 COMMENT '0 matched, 9 rejected',
   `reject_reason` VARCHAR(255) DEFAULT NULL COMMENT 'Failure reason',
-  `settlement_price` DECIMAL(10,2) DEFAULT NULL COMMENT 'Matched settlement price',
+  `settlement_price` DECIMAL(10,2) DEFAULT NULL COMMENT 'Matched product coefficient price',
+  `downstream_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Downstream returned price',
+  `product_coefficient_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Downstream price multiplied by product price ratio',
+  `upstream_channel_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Product coefficient price multiplied by channel fee rate',
   `ext_json` JSON DEFAULT NULL COMMENT 'Future compatibility extension',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `create_by` VARCHAR(64) DEFAULT NULL,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `update_by` VARCHAR(64) DEFAULT NULL,
   INDEX `idx_collision_phone` (`phone_md5`, `created_at`),
+  INDEX `idx_collision_name` (`user_name_md5`, `created_at`),
+  INDEX `idx_collision_channel_code_time` (`channel_code`, `created_at`),
   INDEX `idx_collision_channel_time` (`channel_id`, `created_at`),
   INDEX `idx_collision_status_time` (`collision_status`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Collision record';
+
+CREATE TABLE IF NOT EXISTS `collision_precheck_record` (
+  `id` BIGINT PRIMARY KEY COMMENT 'Snowflake ID',
+  `collision_id` BIGINT DEFAULT NULL COMMENT 'Collision record ID',
+  `collision_no` VARCHAR(32) NOT NULL COMMENT 'Collision record number',
+  `channel_id` BIGINT DEFAULT NULL COMMENT 'Channel ID snapshot',
+  `channel_code` VARCHAR(32) DEFAULT NULL COMMENT 'Channel code snapshot',
+  `inst_id` BIGINT DEFAULT NULL COMMENT 'Institution ID',
+  `inst_code` VARCHAR(32) DEFAULT NULL COMMENT 'Institution code snapshot',
+  `product_id` BIGINT DEFAULT NULL COMMENT 'Product ID',
+  `product_name_snapshot` VARCHAR(128) DEFAULT NULL COMMENT 'Product name snapshot',
+  `trace_id` VARCHAR(64) DEFAULT NULL COMMENT 'Trace ID',
+  `request_id` VARCHAR(64) DEFAULT NULL COMMENT 'Downstream pre-check request ID',
+  `third_order_no` VARCHAR(64) DEFAULT NULL COMMENT 'Downstream pre-check order number',
+  `precheck_status` TINYINT NOT NULL DEFAULT 0 COMMENT '2 passed, 4 rejected, 9 abnormal or timeout',
+  `request_log` TEXT DEFAULT NULL COMMENT 'Desensitized request payload',
+  `response_log` TEXT DEFAULT NULL COMMENT 'Response payload',
+  `downstream_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Downstream returned price',
+  `product_coefficient_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Downstream price multiplied by product price ratio',
+  `upstream_channel_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Product coefficient price multiplied by channel fee rate',
+  `error_msg` VARCHAR(512) DEFAULT NULL COMMENT 'Error message',
+  `cost_ms` INT DEFAULT NULL COMMENT 'Elapsed time in ms',
+  `prechecked_at` DATETIME DEFAULT NULL COMMENT 'Pre-check time',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_collision_precheck_no` (`collision_no`, `prechecked_at`),
+  INDEX `idx_collision_precheck_time` (`prechecked_at`),
+  INDEX `idx_collision_precheck_status_time` (`precheck_status`, `prechecked_at`),
+  INDEX `idx_collision_precheck_channel_time` (`channel_code`, `prechecked_at`),
+  INDEX `idx_collision_precheck_product` (`product_id`, `prechecked_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Collision pre-check product detail';
 
 CREATE TABLE IF NOT EXISTS `apply_order` (
   `id` BIGINT PRIMARY KEY COMMENT 'Snowflake ID',
@@ -203,7 +268,7 @@ CREATE TABLE IF NOT EXISTS `apply_order` (
   `overdue` TINYINT DEFAULT NULL COMMENT 'Overdue status',
   `loan_amount` INT DEFAULT NULL COMMENT 'Requested loan amount',
   `loan_time` INT DEFAULT NULL COMMENT 'Loan term',
-  `customer_level` VARCHAR(32) DEFAULT NULL COMMENT 'Customer level',
+  `customer_level` VARCHAR(32) DEFAULT NULL COMMENT 'Downstream returned customer star level',
   `device_ip` VARCHAR(45) DEFAULT NULL COMMENT 'Device IP',
   `order_status` TINYINT NOT NULL DEFAULT 0 COMMENT '0 init, 1 pushing, 2 approved, 3 loaned, 9 failed',
   `reject_reason` VARCHAR(255) DEFAULT NULL COMMENT 'Failure reason',
@@ -254,13 +319,15 @@ CREATE TABLE IF NOT EXISTS `institution_customer` (
   `overdue` TINYINT DEFAULT NULL COMMENT 'Overdue status',
   `loan_amount` INT DEFAULT NULL COMMENT 'Requested loan amount',
   `loan_time` INT DEFAULT NULL COMMENT 'Loan term',
-  `customer_level` VARCHAR(32) DEFAULT NULL COMMENT 'Customer level',
+  `customer_level` VARCHAR(32) DEFAULT NULL COMMENT 'Downstream returned customer star level',
   `device_ip` VARCHAR(45) DEFAULT NULL COMMENT 'Device IP',
   `settlement_price` DECIMAL(10,2) DEFAULT NULL COMMENT 'Settlement price',
   `customer_status` TINYINT NOT NULL DEFAULT 1 COMMENT '1 applied, 2 approved, 3 loaned, 9 failed',
   `ext_json` JSON DEFAULT NULL COMMENT 'Future compatibility extension',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `create_by` VARCHAR(64) DEFAULT NULL,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `update_by` VARCHAR(64) DEFAULT NULL,
   INDEX `idx_customer_inst_phone` (`inst_id`, `phone_md5`, `created_at`),
   INDEX `idx_customer_channel_time` (`channel_id`, `created_at`),
   INDEX `idx_customer_order_no` (`order_no`)
@@ -280,6 +347,9 @@ CREATE TABLE IF NOT EXISTS `push_record` (
   `push_status` TINYINT NOT NULL DEFAULT 0 COMMENT '0 pending, 1 pushing, 2 accepted, 3 approved, 4 rejected, 9 timeout',
   `request_log` TEXT DEFAULT NULL COMMENT 'Desensitized request payload',
   `response_log` TEXT DEFAULT NULL COMMENT 'Response payload',
+  `downstream_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Downstream returned price',
+  `product_coefficient_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Downstream price multiplied by product price ratio',
+  `upstream_channel_price` DECIMAL(18,2) DEFAULT NULL COMMENT 'Product coefficient price multiplied by channel fee rate',
   `error_msg` VARCHAR(512) DEFAULT NULL COMMENT 'Error message',
   `cost_ms` INT DEFAULT NULL COMMENT 'Elapsed time in ms',
   `pushed_at` DATETIME DEFAULT NULL COMMENT 'Push time',
@@ -348,6 +418,88 @@ CREATE TABLE IF NOT EXISTS `sys_admin` (
 INSERT IGNORE INTO `sys_admin` (`id`, `username`, `password`, `real_name`, `role`, `status`)
 VALUES (1, 'admin', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36LNOQ/VKemXEJmzpN3vj52', 'Super Admin', 'SUPER_ADMIN', 1);
 
+CREATE TABLE IF NOT EXISTS `sys_role` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `role_name` VARCHAR(32) NOT NULL COMMENT 'Role name',
+  `role_code` VARCHAR(32) NOT NULL COMMENT 'Role code',
+  `description` VARCHAR(255) DEFAULT NULL COMMENT 'Description',
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '1 enabled, 0 disabled',
+  `sort` INT NOT NULL DEFAULT 0 COMMENT 'Display sort',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_sys_role_code` (`role_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='System roles';
+
+CREATE TABLE IF NOT EXISTS `sys_menu` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `parent_id` BIGINT NOT NULL DEFAULT 0 COMMENT 'Parent menu ID, 0 means root',
+  `menu_name` VARCHAR(64) NOT NULL COMMENT 'Menu name',
+  `menu_code` VARCHAR(64) NOT NULL COMMENT 'Menu code',
+  `menu_type` TINYINT NOT NULL DEFAULT 2 COMMENT '1 catalog, 2 menu, 3 button',
+  `path` VARCHAR(255) DEFAULT NULL COMMENT 'Route path',
+  `component` VARCHAR(255) DEFAULT NULL COMMENT 'Frontend component path',
+  `permission` VARCHAR(128) DEFAULT NULL COMMENT 'Permission code',
+  `icon` VARCHAR(64) DEFAULT NULL COMMENT 'Menu icon',
+  `sort` INT NOT NULL DEFAULT 0 COMMENT 'Display sort',
+  `visible` TINYINT NOT NULL DEFAULT 1 COMMENT '1 visible, 0 hidden',
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '1 enabled, 0 disabled',
+  `remark` VARCHAR(255) DEFAULT NULL COMMENT 'Remark',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_sys_menu_code` (`menu_code`),
+  KEY `idx_sys_menu_parent_sort` (`parent_id`, `sort`),
+  KEY `idx_sys_menu_permission` (`permission`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='System menus and permissions';
+
+CREATE TABLE IF NOT EXISTS `sys_role_menu` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `role_id` BIGINT NOT NULL COMMENT 'Role ID',
+  `menu_id` BIGINT NOT NULL COMMENT 'Menu ID',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_sys_role_menu` (`role_id`, `menu_id`),
+  KEY `idx_sys_role_menu_menu` (`menu_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Role menu relations';
+
+INSERT IGNORE INTO `sys_role` (`id`, `role_name`, `role_code`, `description`, `status`, `sort`)
+VALUES
+  (1, '超级管理员', 'SUPER_ADMIN', '系统内置超级管理员', 1, 1),
+  (2, '管理员', 'ADMIN', '系统内置管理员', 1, 2),
+  (3, '操作员', 'OPERATOR', '系统内置操作员', 1, 3);
+
+INSERT IGNORE INTO `sys_menu`
+(`id`, `parent_id`, `menu_name`, `menu_code`, `menu_type`, `path`, `component`, `permission`, `icon`, `sort`, `visible`, `status`)
+VALUES
+  (100, 0, '系统管理', 'SYSTEM', 1, '/system', NULL, NULL, 'settings', 100, 1, 1),
+  (110, 100, '用户管理', 'SYSTEM_USER', 2, '/system/user', 'system/user/index', 'system:user:list', 'users', 110, 1, 1),
+  (111, 110, '新增用户', 'SYSTEM_USER_ADD', 3, NULL, NULL, 'system:user:add', NULL, 111, 0, 1),
+  (112, 110, '修改用户', 'SYSTEM_USER_UPDATE', 3, NULL, NULL, 'system:user:update', NULL, 112, 0, 1),
+  (113, 110, '删除用户', 'SYSTEM_USER_DELETE', 3, NULL, NULL, 'system:user:delete', NULL, 113, 0, 1),
+  (114, 110, '启停用户', 'SYSTEM_USER_TOGGLE', 3, NULL, NULL, 'system:user:toggle', NULL, 114, 0, 1),
+  (115, 110, '重置密码', 'SYSTEM_USER_RESET_PASSWORD', 3, NULL, NULL, 'system:user:reset-password', NULL, 115, 0, 1),
+  (120, 100, '角色权限', 'SYSTEM_ROLE', 2, '/system/role', 'system/role/index', 'system:role:list', 'shield', 120, 1, 1),
+  (121, 120, '新增角色', 'SYSTEM_ROLE_ADD', 3, NULL, NULL, 'system:role:add', NULL, 121, 0, 1),
+  (122, 120, '修改角色', 'SYSTEM_ROLE_UPDATE', 3, NULL, NULL, 'system:role:update', NULL, 122, 0, 1),
+  (123, 120, '删除角色', 'SYSTEM_ROLE_DELETE', 3, NULL, NULL, 'system:role:delete', NULL, 123, 0, 1),
+  (124, 120, '启停角色', 'SYSTEM_ROLE_TOGGLE', 3, NULL, NULL, 'system:role:toggle', NULL, 124, 0, 1),
+  (125, 120, '分配菜单', 'SYSTEM_ROLE_ASSIGN_MENU', 3, NULL, NULL, 'system:role:assign-menu', NULL, 125, 0, 1),
+  (130, 100, '菜单管理', 'SYSTEM_MENU', 2, '/system/menu', 'system/menu/index', 'system:menu:list', 'list-checks', 130, 1, 1),
+  (131, 130, '新增菜单', 'SYSTEM_MENU_ADD', 3, NULL, NULL, 'system:menu:add', NULL, 131, 0, 1),
+  (132, 130, '修改菜单', 'SYSTEM_MENU_UPDATE', 3, NULL, NULL, 'system:menu:update', NULL, 132, 0, 1),
+  (133, 130, '删除菜单', 'SYSTEM_MENU_DELETE', 3, NULL, NULL, 'system:menu:delete', NULL, 133, 0, 1),
+  (134, 130, '启停菜单', 'SYSTEM_MENU_TOGGLE', 3, NULL, NULL, 'system:menu:toggle', NULL, 134, 0, 1),
+  (140, 100, '参数配置', 'SYSTEM_CONFIG', 2, '/system/config', 'system/config/index', 'system:config:list', 'sliders-horizontal', 140, 1, 1);
+
+INSERT IGNORE INTO `sys_role_menu` (`role_id`, `menu_id`)
+SELECT 1, `id` FROM `sys_menu`;
+
+INSERT IGNORE INTO `sys_role_menu` (`role_id`, `menu_id`)
+SELECT 2, `id` FROM `sys_menu`;
+
+INSERT IGNORE INTO `sys_role_menu` (`role_id`, `menu_id`)
+VALUES
+  (3, 100),
+  (3, 110);
+
 CREATE TABLE IF NOT EXISTS `sys_oper_log` (
   `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
   `admin_id` BIGINT DEFAULT NULL COMMENT 'Operator admin ID',
@@ -371,5 +523,5 @@ CREATE TABLE IF NOT EXISTS `city_config` (
   KEY `idx_province_status` (`province_name`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='City configuration';
 
--- Run doc/sql/city_config_seed.sql after init.sql to import the full 390-city seed set.
+-- Run doc/sql/city_config_seed.sql after init.sql to import the city seed set.
 -- In production, execute the city seed with a UTF-8 client/session to preserve Chinese text.

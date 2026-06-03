@@ -36,7 +36,19 @@ public class ChannelController {
         return R.ok(adminChannelService.pageChannels(query));
     }
 
-    @Operation(summary = "新增渠道")
+    @Operation(summary = "Channel detail")
+    @GetMapping("/detail/{id}")
+    public R<ChannelListVO> detail(@PathVariable Long id) {
+        return R.ok(adminChannelService.detail(id));
+    }
+
+    @Operation(summary = "Channel detail")
+    @GetMapping("/detail")
+    public R<ChannelListVO> detailByParam(@RequestParam Long id) {
+        return R.ok(adminChannelService.detail(id));
+    }
+
+    @Operation(summary = "Add channel")
     @PostMapping("/add")
     public R<Long> add(@Valid @RequestBody ChannelSaveDTO request) {
         return R.ok(adminChannelService.createChannel(request));

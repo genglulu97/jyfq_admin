@@ -71,7 +71,7 @@ public class DeductionServiceImpl implements DeductionService {
 
         ApplyOrder order = applyOrderMapper.selectOne(new LambdaQueryWrapper<ApplyOrder>()
                 .eq(ApplyOrder::getOrderNo, orderNo)
-                .last("LIMIT 1"));
+                .last("LIMIT 1 FOR UPDATE"));
         if (order == null || order.getInstId() == null || order.getProductId() == null) {
             log.warn("[DEDUCT] missing order/institution snapshot, skip push-success deduction, orderNo={}", orderNo);
             return;
@@ -98,16 +98,22 @@ public class DeductionServiceImpl implements DeductionService {
             return;
         }
 
-        BigDecimal beforeBalance = institution.getAccountBalance() == null ? BigDecimal.ZERO : institution.getAccountBalance();
-        BigDecimal afterBalance = beforeBalance.subtract(order.getSettlementPrice());
-
-        deductionMapper.insert(buildPushSuccessDeductionRecord(order, institution.getInstCode(), order.getSettlementPrice()));
-        institutionMapper.update(null, new LambdaUpdateWrapper<Institution>()
+        BigDecimal amount = order.getSettlementPrice();
+        int updated = institutionMapper.update(null, new LambdaUpdateWrapper<Institution>()
                 .eq(Institution::getId, institution.getId())
-                .set(Institution::getAccountBalance, afterBalance));
+                .ge(Institution::getAccountBalance, amount)
+                .setSql("account_balance = account_balance - {0}", amount));
 
-        log.info("[DEDUCT] push-success deduction completed, orderNo={}, instCode={}, amount={}, beforeBalance={}, afterBalance={}",
-                orderNo, institution.getInstCode(), order.getSettlementPrice(), beforeBalance, afterBalance);
+        if (updated <= 0) {
+            log.warn("[DEDUCT] insufficient balance or concurrent deduction conflict, skip push-success deduction, orderNo={}, instCode={}, amount={}",
+                    orderNo, institution.getInstCode(), amount);
+            return;
+        }
+
+        deductionMapper.insert(buildPushSuccessDeductionRecord(order, institution.getInstCode(), amount));
+
+        log.info("[DEDUCT] push-success deduction completed, orderNo={}, instCode={}, amount={}",
+                orderNo, institution.getInstCode(), amount);
     }
 
     private DeductionRecord buildPushSuccessDeductionRecord(ApplyOrder order, String instCode, BigDecimal amount) {

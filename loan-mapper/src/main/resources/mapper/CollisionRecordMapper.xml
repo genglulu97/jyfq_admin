@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jyfq.loan.mapper.CollisionRecordMapper">
+
+    <select id="selectCollisionLogPage" resultType="com.jyfq.loan.model.vo.CollisionLogRecordRow">
+        SELECT
+            c.id,
+            c.collision_no,
+            NULL AS request_id,
+            NULL AS third_order_no,
+            c.phone_enc,
+            c.user_name AS user_name_enc,
+            c.channel_id,
+            c.channel_code,
+            ch.channel_name,
+            ch.app_key AS channel_app_key,
+            c.inst_id,
+            COALESCE(c.inst_code, i.inst_code) AS inst_code,
+            i.inst_name,
+            c.product_id,
+            COALESCE(ip.product_name, c.product_name_snapshot) AS product_name,
+            CASE
+                WHEN c.collision_status = 0 THEN 2
+                WHEN c.collision_status = 9 THEN 4
+                ELSE c.collision_status
+            END AS push_status,
+            NULL AS response_log,
+            c.reject_reason AS error_msg,
+            NULL AS cost_ms,
+            c.created_at AS pushed_at,
+            c.created_at,
+            c.collision_status,
+            c.reject_reason AS collision_reject_reason,
+            c.settlement_price,
+            c.downstream_price,
+            c.product_coefficient_price,
+            c.upstream_channel_price
+        FROM collision_record c
+        LEFT JOIN channel ch ON ch.id = c.channel_id
+        LEFT JOIN institution i ON i.id = c.inst_id
+        LEFT JOIN institution_product ip ON ip.id = c.product_id
+        <where>
+            <if test="query.collisionNo != null and query.collisionNo != ''">
+                AND c.collision_no = #{query.collisionNo}
+            </if>
+            <if test="query.phoneMd5 != null and query.phoneMd5 != ''">
+                AND c.phone_md5 = #{query.phoneMd5}
+            </if>
+            <if test="query.userNameMd5 != null and query.userNameMd5 != ''">
+                AND c.user_name_md5 = #{query.userNameMd5}
+            </if>
+            <if test="query.channelCode != null and query.channelCode != ''">
+                AND c.channel_code = #{query.channelCode}
+            </if>
+            <if test="query.resultStatus != null">
+                <choose>
+                    <when test="query.resultStatus == 2">
+                        AND c.collision_status = 0
+                    </when>
+                    <otherwise>
+                        AND c.collision_status = 9
+                    </otherwise>
+                </choose>
+            </if>
+            <if test="query.startTime != null">
+                AND c.created_at &gt;= #{query.startTime}
+            </if>
+            <if test="query.endTime != null">
+                AND c.created_at &lt;= #{query.endTime}
+            </if>
+        </where>
+        ORDER BY c.created_at DESC, c.id DESC
+    </select>
+
+</mapper>

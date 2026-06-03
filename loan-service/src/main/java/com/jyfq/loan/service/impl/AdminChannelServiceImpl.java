@@ -1,14 +1,17 @@
 package com.jyfq.loan.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jyfq.loan.common.util.AuditOperatorUtil;
 import com.jyfq.loan.common.exception.BizException;
 import com.jyfq.loan.common.result.PageResult;
+import com.jyfq.loan.mapper.ApplyOrderMapper;
 import com.jyfq.loan.mapper.ChannelMapper;
 import com.jyfq.loan.model.dto.ChannelQueryDTO;
 import com.jyfq.loan.model.dto.ChannelSaveDTO;
+import com.jyfq.loan.model.entity.ApplyOrder;
 import com.jyfq.loan.model.entity.Channel;
 import com.jyfq.loan.model.vo.ChannelListVO;
 import com.jyfq.loan.service.AdminChannelService;
@@ -17,7 +20,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -27,7 +37,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminChannelServiceImpl implements AdminChannelService {
 
+    private static final String PRICE_RETURN_MODE_BEFORE_PROFIT = "BEFORE_PROFIT";
+    private static final String PRICE_RETURN_MODE_AFTER_PROFIT = "AFTER_PROFIT";
+
     private final ChannelMapper channelMapper;
+    private final ApplyOrderMapper applyOrderMapper;
 
     @Override
     public PageResult<ChannelListVO> pageChannels(ChannelQueryDTO query) {
@@ -51,10 +65,26 @@ public class AdminChannelServiceImpl implements AdminChannelService {
             return PageResult.empty(current, size);
         }
 
+        Map<Long, Integer> todayApplyCounts = countTodayApplyOrders(page.getRecords());
         List<ChannelListVO> records = page.getRecords().stream()
-                .map(this::toListVO)
+                .map(channel -> {
+                    ChannelListVO vo = toListVO(channel);
+                    vo.setActualPushCount(todayApplyCounts.getOrDefault(channel.getId(), 0));
+                    return vo;
+                })
                 .collect(Collectors.toList());
         return PageResult.of(page.getCurrent(), page.getSize(), page.getTotal(), records);
+    }
+
+    @Override
+    public ChannelListVO detail(Long id) {
+        Channel channel = channelMapper.selectById(id);
+        if (channel == null) {
+            throw new BizException("Channel not found: " + id);
+        }
+        ChannelListVO vo = toListVO(channel);
+        vo.setActualPushCount(countTodayApplyOrders(Collections.singletonList(channel)).getOrDefault(channel.getId(), 0));
+        return vo;
     }
 
     @Override
@@ -99,10 +129,12 @@ public class AdminChannelServiceImpl implements AdminChannelService {
     }
 
     private void fillChannel(Channel channel, ChannelSaveDTO request) {
+        validatePriceRange(request.getMinPrice(), request.getMaxPrice());
         channel.setChannelId(request.getChannelId().trim());
         channel.setChannelName(request.getChannelName().trim());
         channel.setChannelCode(request.getChannelCode().trim());
         channel.setChannelType(request.getChannelType().trim());
+        channel.setH5Url(resolveH5Url(request));
         channel.setStatus(request.getStatus() == null ? 1 : request.getStatus());
         channel.setBusinessOwner(trimToNull(request.getBusinessOwner()));
         channel.setDailyQuota(defaultInt(request.getDailyQuota(), 10000));
@@ -119,6 +151,9 @@ public class AdminChannelServiceImpl implements AdminChannelService {
         channel.setCallbackUrl(trimToNull(request.getCallbackUrl()));
         channel.setSettlementMode(defaultText(request.getSettlementMode(), "CPA"));
         channel.setFeeRate(request.getFeeRate());
+        channel.setMinPrice(request.getMinPrice());
+        channel.setMaxPrice(request.getMaxPrice());
+        channel.setPriceReturnMode(resolvePriceReturnMode(request.getPriceReturnMode()));
         channel.setExtJson(trimToNull(request.getExtJson()));
         channel.setRemark(trimToNull(request.getRemark()));
     }
@@ -152,6 +187,7 @@ public class AdminChannelServiceImpl implements AdminChannelService {
         vo.setChannelName(channel.getChannelName());
         vo.setChannelCode(channel.getChannelCode());
         vo.setChannelType(channel.getChannelType());
+        vo.setH5Url(channel.getH5Url());
         vo.setStatus(channel.getStatus());
         vo.setStatusDesc(Integer.valueOf(1).equals(channel.getStatus()) ? "启用" : "禁用");
         vo.setBusinessOwner(channel.getBusinessOwner());
@@ -169,6 +205,9 @@ public class AdminChannelServiceImpl implements AdminChannelService {
         vo.setCallbackUrl(channel.getCallbackUrl());
         vo.setSettlementMode(channel.getSettlementMode());
         vo.setFeeRate(channel.getFeeRate());
+        vo.setMinPrice(channel.getMinPrice());
+        vo.setMaxPrice(channel.getMaxPrice());
+        vo.setPriceReturnMode(channel.getPriceReturnMode());
         vo.setExtJson(channel.getExtJson());
         vo.setRemark(channel.getRemark());
         vo.setCreatedAt(channel.getCreatedAt());
@@ -176,6 +215,64 @@ public class AdminChannelServiceImpl implements AdminChannelService {
         vo.setUpdatedAt(channel.getUpdatedAt());
         vo.setUpdateBy(channel.getUpdateBy());
         return vo;
+    }
+
+    private Map<Long, Integer> countTodayApplyOrders(List<Channel> channels) {
+        List<Long> channelIds = channels.stream()
+                .map(Channel::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (channelIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
+        List<Map<String, Object>> rows = applyOrderMapper.selectMaps(new QueryWrapper<ApplyOrder>()
+                .select("channel_id AS channelId", "COUNT(1) AS total")
+                .in("channel_id", channelIds)
+                .ge("created_at", startOfToday)
+                .lt("created_at", startOfTomorrow)
+                .groupBy("channel_id"));
+
+        Map<Long, Integer> counts = new HashMap<>();
+        for (Map<String, Object> row : rows) {
+            Long channelId = toLong(firstPresent(row, "channelId", "channel_id", "CHANNELID", "CHANNEL_ID"));
+            Integer total = toInteger(firstPresent(row, "total", "TOTAL"));
+            if (channelId != null && total != null) {
+                counts.put(channelId, total);
+            }
+        }
+        return counts;
+    }
+
+    private Object firstPresent(Map<String, Object> row, String... keys) {
+        for (String key : keys) {
+            if (row.containsKey(key)) {
+                return row.get(key);
+            }
+        }
+        return null;
+    }
+
+    private Long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value != null) {
+            return Long.parseLong(value.toString());
+        }
+        return null;
+    }
+
+    private Integer toInteger(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value != null) {
+            return Integer.parseInt(value.toString());
+        }
+        return null;
     }
 
     private Integer defaultInt(Integer value, Integer defaultValue) {
@@ -188,5 +285,50 @@ public class AdminChannelServiceImpl implements AdminChannelService {
 
     private String trimToNull(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private void validatePriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            throw new BizException("minPrice cannot be greater than maxPrice");
+        }
+    }
+
+    private String resolvePriceReturnMode(String value) {
+        if (!StringUtils.hasText(value)) {
+            return PRICE_RETURN_MODE_BEFORE_PROFIT;
+        }
+        String trimmed = value.trim();
+        String normalized = trimmed.toUpperCase();
+        if (PRICE_RETURN_MODE_BEFORE_PROFIT.equals(normalized)
+                || "BEFORE".equals(normalized)
+                || "PRE".equals(normalized)
+                || "0".equals(normalized)
+                || "\u5206\u6da6\u524d".equals(trimmed)
+                || "\u5206\u6da6\u524d\u4ef7\u683c".equals(trimmed)) {
+            return PRICE_RETURN_MODE_BEFORE_PROFIT;
+        }
+        if (PRICE_RETURN_MODE_AFTER_PROFIT.equals(normalized)
+                || "AFTER".equals(normalized)
+                || "POST".equals(normalized)
+                || "1".equals(normalized)
+                || "\u5206\u6da6\u540e".equals(trimmed)
+                || "\u5206\u6da6\u540e\u4ef7\u683c".equals(trimmed)) {
+            return PRICE_RETURN_MODE_AFTER_PROFIT;
+        }
+        throw new BizException("priceReturnMode must be BEFORE_PROFIT or AFTER_PROFIT");
+    }
+
+    private String resolveH5Url(ChannelSaveDTO request) {
+        if (!"H5".equalsIgnoreCase(request.getChannelType().trim())) {
+            return null;
+        }
+        String h5Url = trimToNull(request.getH5Url());
+        if (h5Url == null) {
+            throw new BizException("H5链接不能为空");
+        }
+        if (h5Url.length() > 1024) {
+            throw new BizException("H5链接长度不能超过1024");
+        }
+        return h5Url;
     }
 }

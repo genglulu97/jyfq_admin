@@ -9,13 +9,17 @@ import lombok.Data;
 public class PreCheckRequest {
 
     private String phone;
+    private String mobileEight;
+    private String requestId;
     private String idCard;
     private String name;
     private String phoneMd5;
     private String idCardMd5;
+    private String idCardPrefixFour;
     private Integer age;
     private String cityCode;
     private String workCity;
+    private String ip;
     private Integer amount;
     private Integer gender;
     private Integer loanTime;

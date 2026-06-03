@@ -24,6 +24,7 @@ import com.jyfq.loan.model.vo.InstitutionApiConfigListVO;
 import com.jyfq.loan.model.vo.InstitutionApiConfigOptionsVO;
 import com.jyfq.loan.model.vo.InstitutionDetailVO;
 import com.jyfq.loan.model.vo.InstitutionListVO;
+import com.jyfq.loan.model.vo.InstitutionOptionsVO;
 import com.jyfq.loan.model.vo.InstitutionProductVO;
 import com.jyfq.loan.model.vo.InstitutionRechargeRecordVO;
 import com.jyfq.loan.model.vo.OptionVO;
@@ -58,6 +59,15 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
     private static final Set<String> SUPPORTED_ENCRYPT_TYPES = Set.of("PLAIN", "AES", "AES_ECB", "AES_CBC", "ECB", "CBC");
     private static final Set<String> SUPPORTED_CIPHER_MODES = Set.of("CBC", "ECB");
     private static final Set<String> SUPPORTED_PADDING_MODES = Set.of("PKCS5Padding", "PKCS7Padding", "NoPadding");
+    private static final String MERCHANT_TYPE_INSTITUTION = "\u673a\u6784";
+    private static final String MERCHANT_TYPE_AGENT = "\u4ee3\u7406";
+    private static final String MERCHANT_TYPE_CRM = "CRM";
+    private static final String CHANNEL_TYPE_FULL_API_CPS = "\u5168\u6d41\u7a0bAPI-CPS";
+    private static final String CHANNEL_TYPE_MASK_FULL_CPS = "\u63a9\u7801\u5168\u6d41\u7a0bcps";
+    private static final String CHANNEL_TYPE_HALF_API = "\u534a\u6d41\u7a0bAPI";
+    private static final String CHANNEL_TYPE_H5 = "H5";
+    private static final String CITY_ALL_CODE = "ALL";
+    private static final String CITY_ALL_NAME = "全国";
 
     private final CityConfigMapper cityConfigMapper;
     private final InstitutionMapper institutionMapper;
@@ -106,6 +116,8 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
             List<InstitutionProduct> products = productMap.getOrDefault(inst.getId(), Collections.emptyList());
             vo.setProductName(resolveListProductName(inst, products));
             vo.setMerchantType(defaultText(inst.getMerchantType(), "机构"));
+            vo.setChannelType(defaultText(inst.getChannelType(), CHANNEL_TYPE_FULL_API_CPS));
+            vo.setBusinessOwner(inst.getBusinessOwner());
             vo.setOpenCities(resolveListOpenCities(inst, products));
             vo.setStatus(inst.getStatus());
             vo.setStatusDesc(resolveStatus(inst.getStatus()));
@@ -169,7 +181,6 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
         institution.setAccountBalance(BigDecimal.ZERO);
         institution.setRechargeTotal(BigDecimal.ZERO);
         institutionMapper.insert(institution);
-        saveOrUpdatePrimaryInstitutionProduct(institution, request);
         return institution.getId();
     }
 
@@ -208,6 +219,14 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
     }
 
     @Override
+    public InstitutionOptionsVO getInstitutionOptions() {
+        InstitutionOptionsVO vo = new InstitutionOptionsVO();
+        vo.setMerchantTypeOptions(buildMerchantTypeOptions());
+        vo.setChannelTypeOptions(buildChannelTypeOptions());
+        return vo;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateInstitution(Long instId, InstitutionSaveDTO request) {
         Institution institution = institutionMapper.selectById(instId);
@@ -216,7 +235,6 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
         }
         fillInstitutionBase(institution, request);
         institutionMapper.updateById(institution);
-        saveOrUpdatePrimaryInstitutionProduct(institution, request);
     }
 
     @Override
@@ -272,13 +290,16 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
 
     @Override
     public List<OptionVO> listCityOptions() {
-        return cityConfigMapper.selectList(new LambdaQueryWrapper<CityConfig>()
+        List<OptionVO> options = new ArrayList<>();
+        options.add(new OptionVO(CITY_ALL_NAME, CITY_ALL_CODE));
+        options.addAll(cityConfigMapper.selectList(new LambdaQueryWrapper<CityConfig>()
                         .eq(CityConfig::getStatus, 1)
                         .orderByAsc(CityConfig::getSort)
                         .orderByAsc(CityConfig::getCityCode))
                 .stream()
                 .map(city -> new OptionVO(city.getCityName(), city.getCityCode()))
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
+        return options;
     }
 
     @Override
@@ -393,6 +414,8 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
         vo.setInstName(institution.getInstName());
         vo.setMerchantAlias(institution.getMerchantAlias());
         vo.setMerchantType(institution.getMerchantType());
+        vo.setChannelType(defaultText(institution.getChannelType(), CHANNEL_TYPE_FULL_API_CPS));
+        vo.setBusinessOwner(institution.getBusinessOwner());
         vo.setStatus(institution.getStatus());
         vo.setStatusDesc(resolveStatus(institution.getStatus()));
         vo.setAdminPhone(institution.getAdminPhone());
@@ -486,7 +509,9 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
     private void fillInstitutionBase(Institution institution, InstitutionSaveDTO request) {
         institution.setInstName(request.getInstName().trim());
         institution.setMerchantAlias(request.getMerchantAlias().trim());
-        institution.setMerchantType(defaultText(request.getMerchantType(), "机构"));
+        institution.setMerchantType(normalizeMerchantType(request.getMerchantType()));
+        institution.setChannelType(normalizeChannelType(request.getChannelType()));
+        institution.setBusinessOwner(trimToNull(request.getBusinessOwner()));
         institution.setStatus(request.getBusinessStatus() == null ? 1 : request.getBusinessStatus());
         institution.setAdminPhone(request.getAdminPhone());
         institution.setAdminName(request.getAdminName());
@@ -540,6 +565,38 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
 
     private String defaultText(String value, String fallback) {
         return StringUtils.hasText(value) ? value.trim() : fallback;
+    }
+
+    private String normalizeMerchantType(String value) {
+        String normalized = defaultText(value, MERCHANT_TYPE_INSTITUTION);
+        return MERCHANT_TYPE_CRM.equalsIgnoreCase(normalized) ? MERCHANT_TYPE_CRM : normalized;
+    }
+
+    private List<OptionVO> buildMerchantTypeOptions() {
+        return List.of(
+                new OptionVO(MERCHANT_TYPE_INSTITUTION, MERCHANT_TYPE_INSTITUTION),
+                new OptionVO(MERCHANT_TYPE_AGENT, MERCHANT_TYPE_AGENT),
+                new OptionVO(MERCHANT_TYPE_CRM, MERCHANT_TYPE_CRM)
+        );
+    }
+
+    private List<OptionVO> buildChannelTypeOptions() {
+        return List.of(
+                new OptionVO(CHANNEL_TYPE_FULL_API_CPS, CHANNEL_TYPE_FULL_API_CPS),
+                new OptionVO(CHANNEL_TYPE_MASK_FULL_CPS, CHANNEL_TYPE_MASK_FULL_CPS),
+                new OptionVO(CHANNEL_TYPE_HALF_API, CHANNEL_TYPE_HALF_API),
+                new OptionVO(CHANNEL_TYPE_H5, CHANNEL_TYPE_H5)
+        );
+    }
+
+    private String normalizeChannelType(String value) {
+        String normalized = defaultText(value, CHANNEL_TYPE_FULL_API_CPS);
+        for (OptionVO option : buildChannelTypeOptions()) {
+            if (option.getValue().equalsIgnoreCase(normalized)) {
+                return option.getValue();
+            }
+        }
+        return normalized;
     }
 
     private String trimToNull(String value) {
@@ -658,30 +715,6 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
         return citySet.isEmpty() ? "-" : String.join(",", citySet);
     }
 
-    private void saveOrUpdatePrimaryInstitutionProduct(Institution institution, InstitutionSaveDTO request) {
-        InstitutionProduct product = findPrimaryProduct(institution.getId());
-        if (product == null) {
-            product = new InstitutionProduct();
-            product.setInstId(institution.getId());
-        }
-        product.setProductName(defaultText(request.getProductName(), defaultText(institution.getInstName(), institution.getMerchantAlias())));
-        product.setProductIcon(request.getProductIcon());
-        product.setMaxAmount(request.getProductAmount());
-        product.setRate(request.getProductRate());
-        product.setPeriod(request.getProductPeriod());
-        product.setProtocolUrl(request.getProductProtocol());
-        product.setCityNames(resolveOpenCities(request));
-        product.setStatus(institution.getStatus());
-        product.setSpecifiedChannels(institution.getSpecifiedChannel());
-        product.setExcludedChannels(institution.getExcludedChannels());
-        product.setRemark(defaultText(request.getRemark(), "default product created with institution"));
-        if (product.getId() == null) {
-            institutionProductMapper.insert(product);
-            return;
-        }
-        institutionProductMapper.updateById(product);
-    }
-
     private InstitutionProduct findPrimaryProduct(Long instId) {
         List<InstitutionProduct> products = institutionProductMapper.selectList(new LambdaQueryWrapper<InstitutionProduct>()
                 .eq(InstitutionProduct::getInstId, instId)
@@ -700,7 +733,11 @@ public class AdminInstitutionServiceImpl implements AdminInstitutionService {
         List<String> cities = new ArrayList<>();
         for (String cityCode : request.getCityCodes()) {
             if (StringUtils.hasText(cityCode)) {
-                cities.add(cityCode.trim());
+                String trimmed = cityCode.trim();
+                if (CITY_ALL_CODE.equalsIgnoreCase(trimmed) || CITY_ALL_NAME.equals(trimmed)) {
+                    return CITY_ALL_NAME;
+                }
+                cities.add(trimmed);
             }
         }
         return cities.isEmpty() ? null : String.join(",", cities);

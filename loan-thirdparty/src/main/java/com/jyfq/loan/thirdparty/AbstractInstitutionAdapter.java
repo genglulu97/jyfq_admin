@@ -34,7 +34,7 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
         String requestJson = JSON.toJSONString(body);
         String encryptedBody = encrypt(institution, requestJson);
         long startMs = System.currentTimeMillis();
-        log.info("[PUSH] 下游请求准备 | 适配器={} | 机构编码={} | 请求地址={} | 加密方式={} | 加密Key={} | 未加密请求JSON={} | 撞库请求加密JSON={}",
+        log.info("[DOWNSTREAM] encrypted request prepared | adapter={} | instCode={} | url={} | encryptType={} | key={} | plainJson={} | encryptedJson={}",
                 getAdapterKey(),
                 institution == null ? null : institution.getInstCode(),
                 url,
@@ -46,17 +46,20 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
         try {
             Request request = new Request.Builder()
                     .url(url)
+                    .header("Connection", "close")
                     .post(RequestBody.create(encryptedBody, JSON_MEDIA))
                     .build();
 
             try (Response response = resolveHttpClient(institution).newCall(request).execute()) {
+                int httpStatus = response.code();
                 String rawResp = response.body() != null ? response.body().string() : "";
                 String decrypted = decrypt(institution, rawResp);
                 long costMs = System.currentTimeMillis() - startMs;
-                log.info("[PUSH] 下游请求成功 | 适配器={} | 机构编码={} | 请求地址={} | 耗时={}ms | 原始响应={} | 解密后响应={}",
+                log.info("[DOWNSTREAM] encrypted request completed | adapter={} | instCode={} | url={} | httpStatus={} | costMs={}ms | rawResp={} | decryptedResp={}",
                         getAdapterKey(),
                         institution == null ? null : institution.getInstCode(),
                         url,
+                        httpStatus,
                         costMs,
                         rawResp,
                         decrypted);
@@ -64,7 +67,7 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
             }
         } catch (IOException e) {
             long costMs = System.currentTimeMillis() - startMs;
-            log.error("[PUSH] adapter={} instCode={} url={} costMs={} error={}",
+            log.error("[DOWNSTREAM] encrypted request error | adapter={} | instCode={} | url={} | costMs={}ms | error={}",
                     getAdapterKey(), institution == null ? null : institution.getInstCode(), url, costMs, e.getMessage());
             throw new ThirdPartyException(institution == null ? getAdapterKey() : institution.getInstCode(), e);
         }
@@ -73,7 +76,7 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
     protected <T> T doPlainPost(Institution institution, String url, Object body, Class<T> respType) {
         String requestJson = JSON.toJSONString(body);
         long startMs = System.currentTimeMillis();
-        log.info("[PUSH] 下游明文请求准备 | 适配器={} | 机构编码={} | 请求地址={} | 未加密请求JSON={}",
+        log.info("[DOWNSTREAM] plain request prepared | adapter={} | instCode={} | url={} | requestJson={}",
                 getAdapterKey(),
                 institution == null ? null : institution.getInstCode(),
                 url,
@@ -82,19 +85,21 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
         try {
             Request request = new Request.Builder()
                     .url(url)
+                    .header("Connection", "close")
                     .post(RequestBody.create(requestJson, JSON_MEDIA))
                     .build();
 
             try (Response response = resolveHttpClient(institution).newCall(request).execute()) {
+                int httpStatus = response.code();
                 String rawResp = response.body() != null ? response.body().string() : "";
                 long costMs = System.currentTimeMillis() - startMs;
-                log.info("[PUSH] 下游明文请求成功 | 适配器={} | 机构编码={} | 请求地址={} | 耗时={}ms | 原始响应={}",
-                        getAdapterKey(), institution == null ? null : institution.getInstCode(), url, costMs, rawResp);
+                log.info("[DOWNSTREAM] plain request completed | adapter={} | instCode={} | url={} | httpStatus={} | costMs={}ms | rawResp={}",
+                        getAdapterKey(), institution == null ? null : institution.getInstCode(), url, httpStatus, costMs, rawResp);
                 return JSON.parseObject(StringUtils.hasText(rawResp) ? rawResp : "{}", respType);
             }
         } catch (IOException e) {
             long costMs = System.currentTimeMillis() - startMs;
-            log.error("[PUSH] adapter={} instCode={} url={} costMs={} error={} plain",
+            log.error("[DOWNSTREAM] plain request error | adapter={} | instCode={} | url={} | costMs={}ms | error={}",
                     getAdapterKey(), institution == null ? null : institution.getInstCode(), url, costMs, e.getMessage());
             throw new ThirdPartyException(institution == null ? getAdapterKey() : institution.getInstCode(), e);
         }
@@ -133,7 +138,7 @@ public abstract class AbstractInstitutionAdapter implements InstitutionAdapter {
                     buildTransformation(encryptType, institution.getCipherMode(), institution.getPaddingMode()),
                     resolveIv(institution.getIvValue(), institution.getAppKey()));
         } catch (RuntimeException ex) {
-            log.warn("[PUSH] decrypt fallback to raw response, instCode={}",
+            log.warn("[DOWNSTREAM] decrypt fallback to raw response, instCode={}",
                     institution == null ? null : institution.getInstCode(), ex);
             return cipherText;
         }

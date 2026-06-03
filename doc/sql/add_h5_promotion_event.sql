@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `h5_promotion_event` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `channel_id` BIGINT NOT NULL COMMENT 'Channel ID',
+  `channel_code` VARCHAR(32) NOT NULL COMMENT 'Channel code snapshot',
+  `event_type` VARCHAR(32) NOT NULL COMMENT 'PV, CLICK, REGISTER, COMPLETE',
+  `visitor_id` VARCHAR(64) DEFAULT NULL COMMENT 'Visitor ID',
+  `session_id` VARCHAR(64) DEFAULT NULL COMMENT 'Session ID',
+  `page_url` VARCHAR(1024) DEFAULT NULL COMMENT 'Page URL',
+  `referer` VARCHAR(1024) DEFAULT NULL COMMENT 'Referer',
+  `user_agent` VARCHAR(512) DEFAULT NULL COMMENT 'User agent',
+  `device_ip` VARCHAR(45) DEFAULT NULL COMMENT 'Client IP',
+  `ext_json` TEXT DEFAULT NULL COMMENT 'Extension JSON',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `create_by` VARCHAR(64) DEFAULT NULL,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `update_by` VARCHAR(64) DEFAULT NULL,
+  INDEX `idx_h5_event_channel_time` (`channel_id`, `created_at`),
+  INDEX `idx_h5_event_code_time` (`channel_code`, `created_at`),
+  INDEX `idx_h5_event_type_time` (`event_type`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='H5 promotion event';

@@ -21,6 +21,18 @@
             <artifactId>loan-service</artifactId>
         </dependency>
 
+        <!-- loan-mapper -->
+        <dependency>
+            <groupId>com.jyfq</groupId>
+            <artifactId>loan-mapper</artifactId>
+        </dependency>
+
+        <!-- loan-model -->
+        <dependency>
+            <groupId>com.jyfq</groupId>
+            <artifactId>loan-model</artifactId>
+        </dependency>
+
         <!-- loan-job（管理后台可触发手动任务） -->
         <dependency>
             <groupId>com.jyfq</groupId>

@@ -5,9 +5,6 @@ import com.jyfq.loan.model.dto.CommonUpstreamPayloadDTO;
 import com.jyfq.loan.model.dto.StandardApplyData;
 import org.springframework.util.StringUtils;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 /**
  * Common upstream public protocol enum mapping.
  */
@@ -25,6 +22,7 @@ public final class CommonUpstreamMappingUtil {
                 .phone(phone)
                 .phoneMd5(resolvePhoneMd5(payload.getPhoneMd5(), phone))
                 .idCard(trimToNull(payload.getIdCard()))
+                .idCardPrefixFour(trimToNull(payload.getIdCardPrefixFour()))
                 .age(payload.getAge())
                 .cityCode(resolveCityCode(payload))
                 .workCity(workCity)
@@ -35,13 +33,11 @@ public final class CommonUpstreamMappingUtil {
                 .vehicle(normalizeBinaryAsset(payload.getVehicle()))
                 .providentFund(normalizeDuration(payload.getProvidentFund()))
                 .socialSecurity(normalizeDuration(payload.getSocialSecurity()))
-                .commercialInsurance(normalizeDuration(payload.getCommercialInsurance()))
+                .commercialInsurance(normalizeCommercialInsurance(payload.getCommercialInsurance()))
                 .overdue(normalizeOverdue(payload.getOverdue()))
                 .loanAmount(normalizeLoanAmount(payload.getLoanAmount()))
                 .loanTime(normalizeLoanTime(payload.getLoanTime()))
-                .customerLevel(trimToNull(payload.getCustomerLevel()))
                 .ip(trimToNull(payload.getDeviceIp()))
-                .extraInfo(buildExtraInfo(payload))
                 .build();
     }
 
@@ -49,26 +45,14 @@ public final class CommonUpstreamMappingUtil {
         if (payload == null) {
             return null;
         }
-        if (StringUtils.hasText(payload.getCityCode())) {
-            return payload.getCityCode().trim();
-        }
-        return trimToNull(payload.getCity());
+        return trimToNull(payload.getCityCode());
     }
 
     public static String resolveWorkCity(CommonUpstreamPayloadDTO payload) {
         if (payload == null) {
             return null;
         }
-        if (StringUtils.hasText(payload.getWorkCity())) {
-            return payload.getWorkCity().trim();
-        }
-        if (StringUtils.hasText(payload.getProvince()) && StringUtils.hasText(payload.getCity())) {
-            return payload.getProvince().trim() + "/" + payload.getCity().trim();
-        }
-        if (StringUtils.hasText(payload.getCity())) {
-            return payload.getCity().trim();
-        }
-        return null;
+        return trimToNull(payload.getCity());
     }
 
     public static String resolvePhoneMd5(String phoneMd5, String phone) {
@@ -103,11 +87,11 @@ public final class CommonUpstreamMappingUtil {
             return null;
         }
         return switch (value) {
-            case 1 -> 580;
-            case 2 -> 620;
-            case 3 -> 680;
-            case 4 -> 720;
-            case 5 -> null;
+            case 1 -> 620;
+            case 2 -> 680;
+            case 3 -> 720;
+            case 4 -> null;
+            case 5 -> 580;
             default -> value > 100 ? value : null;
         };
     }
@@ -119,6 +103,19 @@ public final class CommonUpstreamMappingUtil {
         return switch (value) {
             case 1, 2, 3 -> value;
             case 0, 4 -> 0;
+            default -> 0;
+        };
+    }
+
+    public static Integer normalizeCommercialInsurance(Integer value) {
+        if (value == null) {
+            return 0;
+        }
+        return switch (value) {
+            case 0 -> 1;
+            case 1 -> 2;
+            case 2 -> 3;
+            case 3 -> 0;
             default -> 0;
         };
     }
@@ -173,24 +170,4 @@ public final class CommonUpstreamMappingUtil {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
-    private static Map<String, Object> buildExtraInfo(CommonUpstreamPayloadDTO payload) {
-        Map<String, Object> extraInfo = new LinkedHashMap<>();
-        if (payload.getExtraInfo() != null && !payload.getExtraInfo().isEmpty()) {
-            extraInfo.putAll(payload.getExtraInfo());
-        }
-        putIfPresent(extraInfo, "city", trimToNull(payload.getCity()));
-        putIfPresent(extraInfo, "province", trimToNull(payload.getProvince()));
-        putIfPresent(extraInfo, "provinceCode", trimToNull(payload.getProvinceCode()));
-        putIfPresent(extraInfo, "agreeProtocol", trimToNull(payload.getAgreeProtocol()));
-        if (payload.getProductId() != null) {
-            extraInfo.put("productId", payload.getProductId());
-        }
-        return extraInfo.isEmpty() ? null : extraInfo;
-    }
-
-    private static void putIfPresent(Map<String, Object> extraInfo, String key, String value) {
-        if (StringUtils.hasText(value)) {
-            extraInfo.put(key, value);
-        }
-    }
 }

@@ -17,6 +17,7 @@ public class ChannelListVO implements Serializable {
     private String channelName;
     private String channelCode;
     private String channelType;
+    private String h5Url;
     private Integer status;
     private String statusDesc;
     private String businessOwner;
@@ -34,6 +35,9 @@ public class ChannelListVO implements Serializable {
     private String callbackUrl;
     private String settlementMode;
     private BigDecimal feeRate;
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
+    private String priceReturnMode;
     private String extJson;
     private String remark;
     private LocalDateTime createdAt;

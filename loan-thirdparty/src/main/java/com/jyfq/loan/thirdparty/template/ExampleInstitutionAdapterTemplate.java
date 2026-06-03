@@ -1,5 +1,6 @@
 package com.jyfq.loan.thirdparty.template;
 
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.jyfq.loan.model.dto.StandardApplyData;
 import com.jyfq.loan.model.entity.Institution;
@@ -52,8 +53,14 @@ public class ExampleInstitutionAdapterTemplate extends AbstractInstitutionAdapte
                     .build();
         }
 
-        JSONObject resp = doPost(institution, institution.getPreCheckUrl(), buildPreCheckPayload(institution, req), JSONObject.class);
-        return parsePreCheckResponse(institution, resp);
+        JSONObject payload = buildPreCheckPayload(institution, req);
+        JSONObject resp = doPost(institution, institution.getPreCheckUrl(), payload, JSONObject.class);
+        PreCheckResult result = parsePreCheckResponse(institution, resp);
+        if (result != null) {
+            result.setRequestLog(toJson(payload));
+            result.setResponseLog(toJson(resp));
+        }
+        return result;
     }
 
     @Override
@@ -151,6 +158,10 @@ public class ExampleInstitutionAdapterTemplate extends AbstractInstitutionAdapte
                 .instCode(institution == null ? null : institution.getInstCode())
                 .rejectReason(resp == null ? "preCheck failed" : resolveText(resolveResultData(resp), resp, "msg", "message", "errorMsg"))
                 .build();
+    }
+
+    protected String toJson(Object value) {
+        return value == null ? null : JSON.toJSONString(value);
     }
 
     protected PushResult parsePushResponse(Institution institution, JSONObject resp) {

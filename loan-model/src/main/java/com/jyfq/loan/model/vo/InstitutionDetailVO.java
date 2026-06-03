@@ -17,6 +17,8 @@ public class InstitutionDetailVO implements Serializable {
     private String instName;
     private String merchantAlias;
     private String merchantType;
+    private String channelType;
+    private String businessOwner;
     private Integer status;
     private String statusDesc;
     private String adminPhone;

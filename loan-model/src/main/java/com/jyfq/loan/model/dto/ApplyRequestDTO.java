@@ -54,6 +54,7 @@ public class ApplyRequestDTO implements Serializable {
     private Integer commercialInsurance;
     private Integer overdue;
     private Integer loanTime;
+    /** Ignored on submit; customer level is reserved for downstream institution return. */
     private String customerLevel;
     private String deviceIp;
 

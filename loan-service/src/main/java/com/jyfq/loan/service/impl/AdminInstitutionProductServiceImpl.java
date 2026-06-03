@@ -61,6 +61,8 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
     private static final String TOKEN_NONE = "NONE";
     private static final String TOKEN_NO_OVERDUE = "NO_OVERDUE";
     private static final String TOKEN_HAS_OVERDUE = "HAS_OVERDUE";
+    private static final String CITY_ALL_CODE = "ALL";
+    private static final String CITY_ALL_NAME = "全国";
 
     private final InstitutionProductMapper institutionProductMapper;
     private final InstitutionMapper institutionMapper;
@@ -129,9 +131,9 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
         vo.setStatusDesc(resolveStatusDesc(product.getStatus()));
         vo.setMinAge(product.getMinAge());
         vo.setMaxAge(product.getMaxAge());
-        vo.setCityCodes(parseJsonArray(product.getCityList()));
+        vo.setCityCodes(normalizeCityCodes(parseJsonArray(product.getCityList())));
         vo.setCityNames(parseTextList(product.getCityNames()));
-        vo.setExcludedCityCodes(parseJsonArray(product.getExcludedCityCodes()));
+        vo.setExcludedCityCodes(normalizeCityCodes(parseJsonArray(product.getExcludedCityCodes())));
         vo.setExcludedCityNames(parseTextList(product.getExcludedCityNames()));
         vo.setUnitPrice(defaultDecimal(product.getUnitPrice()));
         vo.setPriceRatio(product.getPriceRatio());
@@ -276,13 +278,16 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
                 .map(channel -> new OptionVO(channel.getChannelName(), channel.getChannelCode()))
                 .collect(Collectors.toList()));
 
-        vo.setCities(cityConfigMapper.selectList(new LambdaQueryWrapper<CityConfig>()
+        List<OptionVO> cityOptions = new ArrayList<>();
+        cityOptions.add(new OptionVO(CITY_ALL_NAME, CITY_ALL_CODE));
+        cityOptions.addAll(cityConfigMapper.selectList(new LambdaQueryWrapper<CityConfig>()
                         .eq(CityConfig::getStatus, STATUS_ENABLED)
                         .orderByAsc(CityConfig::getSort)
                         .orderByAsc(CityConfig::getCityCode))
                 .stream()
                 .map(city -> new OptionVO(city.getCityName(), city.getCityCode()))
                 .collect(Collectors.toList()));
+        vo.setCities(cityOptions);
 
         vo.setStatusOptions(Arrays.asList(
                 new OptionVO("启用", String.valueOf(STATUS_ENABLED)),
@@ -390,9 +395,22 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
         target.setMaxAge(request.getMaxAge());
         target.setMinAmount(request.getMinAmount());
         target.setMaxAmount(request.getMaxAmount());
-        List<String> cityCodes = normalizeDistinct(firstNonEmpty(request.getCityCodes(), request.getCityNames()));
+        List<String> cityCodes = normalizeCityCodes(normalizeDistinct(firstNonEmpty(request.getCityCodes(), request.getCityNames())));
         List<String> cityNames = normalizeDistinct(firstNonEmpty(request.getCityNames(), request.getCityCodes()));
-        List<String> excludedCityCodes = normalizeDistinct(firstNonEmpty(request.getExcludedCityCodes(), request.getExcludedCityNames()));
+        if (hasSpecificCity(cityCodes) || hasSpecificCity(cityNames)) {
+            cityCodes = removeAllCityValues(cityCodes);
+            cityNames = removeAllCityValues(cityNames);
+            if (cityCodes.isEmpty()) {
+                cityCodes = cityNames;
+            }
+            if (cityNames.isEmpty()) {
+                cityNames = cityCodes;
+            }
+        } else if (containsAllCity(cityCodes) || containsAllCity(cityNames)) {
+            cityCodes = Collections.singletonList(CITY_ALL_CODE);
+            cityNames = Collections.singletonList(CITY_ALL_NAME);
+        }
+        List<String> excludedCityCodes = normalizeCityCodes(normalizeDistinct(firstNonEmpty(request.getExcludedCityCodes(), request.getExcludedCityNames())));
         List<String> excludedCityNames = normalizeDistinct(firstNonEmpty(request.getExcludedCityNames(), request.getExcludedCityCodes()));
         target.setCityMode(cityCodes.isEmpty() ? 0 : 1);
         target.setCityList(toJsonArray(cityCodes));
@@ -473,6 +491,12 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
                 .orderByAsc(InstitutionProduct::getId));
         LinkedHashSet<String> cities = new LinkedHashSet<>();
         for (InstitutionProduct product : products) {
+            if (containsAllCity(parseJsonArray(product.getCityList())) || containsAllCity(parseTextList(product.getCityNames()))) {
+                institutionMapper.update(null, new LambdaUpdateWrapper<Institution>()
+                        .eq(Institution::getId, instId)
+                        .set(Institution::getOpenCities, CITY_ALL_NAME));
+                return;
+            }
             cities.addAll(parseTextList(product.getCityNames()));
         }
         institutionMapper.update(null, new LambdaUpdateWrapper<Institution>()
@@ -853,6 +877,71 @@ public class AdminInstitutionProductServiceImpl implements AdminInstitutionProdu
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    private List<String> normalizeCityCodes(List<String> values) {
+        if (CollectionUtils.isEmpty(values)) {
+            return Collections.emptyList();
+        }
+        return values.stream()
+                .map(this::normalizeCityCode)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private String normalizeCityCode(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null || CITY_ALL_CODE.equalsIgnoreCase(normalized)) {
+            return normalized;
+        }
+        String digits = normalized.chars()
+                .filter(Character::isDigit)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
+        if (digits.length() >= 6) {
+            return toCityLevelCode(digits.substring(0, 6));
+        }
+        return digits.length() >= 4 ? digits.substring(0, 4) : normalized;
+    }
+
+    private String toCityLevelCode(String code) {
+        if (code.length() < 6 || "90".equals(code.substring(2, 4))) {
+            return code;
+        }
+        return code.substring(0, 4) + "00";
+    }
+
+    private boolean containsAllCity(List<String> values) {
+        if (CollectionUtils.isEmpty(values)) {
+            return false;
+        }
+        return values.stream()
+                .anyMatch(this::isAllCityValue);
+    }
+
+    private boolean hasSpecificCity(List<String> values) {
+        if (CollectionUtils.isEmpty(values)) {
+            return false;
+        }
+        return values.stream()
+                .map(this::trimToNull)
+                .filter(Objects::nonNull)
+                .anyMatch(value -> !isAllCityValue(value));
+    }
+
+    private List<String> removeAllCityValues(List<String> values) {
+        if (CollectionUtils.isEmpty(values)) {
+            return Collections.emptyList();
+        }
+        return values.stream()
+                .filter(value -> !isAllCityValue(value))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isAllCityValue(String value) {
+        String normalized = trimToNull(value);
+        return normalized != null && (CITY_ALL_CODE.equalsIgnoreCase(normalized) || CITY_ALL_NAME.equals(normalized));
     }
 
     private List<String> firstNonEmpty(List<String> primary, List<String> fallback) {

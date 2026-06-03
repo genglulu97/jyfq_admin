@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jyfq.loan.mapper.CollisionPrecheckRecordMapper">
+
+    <select id="selectCollisionLogDetails" resultType="com.jyfq.loan.model.vo.CollisionLogRecordRow">
+        SELECT
+            d.id,
+            d.collision_no,
+            d.request_id,
+            d.third_order_no,
+            d.inst_id,
+            COALESCE(d.inst_code, i.inst_code) AS inst_code,
+            i.inst_name,
+            d.product_id,
+            COALESCE(ip.product_name, d.product_name_snapshot, c.product_name_snapshot) AS product_name,
+            d.precheck_status AS push_status,
+            d.request_log,
+            d.response_log,
+            d.downstream_price,
+            d.product_coefficient_price,
+            d.upstream_channel_price,
+            d.error_msg,
+            d.cost_ms,
+            d.prechecked_at AS pushed_at,
+            d.created_at,
+            c.channel_id,
+            c.channel_code,
+            c.phone_enc,
+            c.user_name AS user_name_enc,
+            c.collision_status,
+            c.reject_reason AS collision_reject_reason,
+            c.settlement_price,
+            ch.channel_name,
+            ch.app_key AS channel_app_key
+        FROM collision_precheck_record d
+        INNER JOIN collision_record c ON c.collision_no = d.collision_no
+        LEFT JOIN channel ch ON ch.id = c.channel_id
+        LEFT JOIN institution i ON i.id = d.inst_id
+        LEFT JOIN institution_product ip ON ip.id = d.product_id
+        WHERE d.collision_no = #{collisionNo}
+        ORDER BY d.prechecked_at DESC, d.id DESC
+    </select>
+
+</mapper>

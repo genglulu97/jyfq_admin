@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -42,6 +43,12 @@ public class PushRecord {
     private String requestLog;
 
     private String responseLog;
+
+    private BigDecimal downstreamPrice;
+
+    private BigDecimal productCoefficientPrice;
+
+    private BigDecimal upstreamChannelPrice;
 
     private String errorMsg;
 

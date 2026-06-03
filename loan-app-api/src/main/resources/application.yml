@@ -66,6 +66,11 @@ knife4j:
   setting:
     language: zh_cn
 
+h5:
+  location:
+    provider-url: "https://whois.pconline.com.cn/ipJson.jsp?json=true&ip={ip}"
+    timeout-ms: 1500
+
 # ==================== 日志 ====================
 logging:
   level:

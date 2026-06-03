@@ -1,5 +1,6 @@
 package com.jyfq.loan.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,6 +27,9 @@ public class ChannelSaveDTO implements Serializable {
     @NotBlank(message = "类型不能为空")
     private String channelType;
 
+    @JsonAlias({"h5Link", "h5LinkUrl"})
+    private String h5Url;
+
     private Integer status;
     private String businessOwner;
     private Integer dailyQuota;
@@ -48,6 +52,14 @@ public class ChannelSaveDTO implements Serializable {
     @NotNull(message = "单价或返点比例不能为空")
     @DecimalMin(value = "0", inclusive = true, message = "单价或返点比例不能小于0")
     private BigDecimal feeRate;
+
+    @DecimalMin(value = "0", inclusive = true, message = "minPrice must be >= 0")
+    private BigDecimal minPrice;
+
+    @DecimalMin(value = "0", inclusive = true, message = "maxPrice must be >= 0")
+    private BigDecimal maxPrice;
+
+    private String priceReturnMode;
 
     private String extJson;
     private String remark;

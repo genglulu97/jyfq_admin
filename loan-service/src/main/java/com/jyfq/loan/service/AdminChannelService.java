@@ -12,6 +12,8 @@ public interface AdminChannelService {
 
     PageResult<ChannelListVO> pageChannels(ChannelQueryDTO query);
 
+    ChannelListVO detail(Long id);
+
     Long createChannel(ChannelSaveDTO request);
 
     void updateChannel(Long id, ChannelSaveDTO request);

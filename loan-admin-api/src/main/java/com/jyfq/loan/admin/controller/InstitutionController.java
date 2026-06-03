@@ -12,6 +12,7 @@ import com.jyfq.loan.model.vo.InstitutionApiConfigListVO;
 import com.jyfq.loan.model.vo.InstitutionApiConfigOptionsVO;
 import com.jyfq.loan.model.vo.InstitutionDetailVO;
 import com.jyfq.loan.model.vo.InstitutionListVO;
+import com.jyfq.loan.model.vo.InstitutionOptionsVO;
 import com.jyfq.loan.model.vo.InstitutionProductVO;
 import com.jyfq.loan.model.vo.InstitutionRechargeRecordVO;
 import com.jyfq.loan.model.vo.OptionVO;
@@ -76,6 +77,12 @@ public class InstitutionController {
     @GetMapping("/api-config/options")
     public R<InstitutionApiConfigOptionsVO> apiConfigOptions() {
         return R.ok(adminInstitutionService.getInstitutionApiConfigOptions());
+    }
+
+    @Operation(summary = "institution form options")
+    @GetMapping("/options")
+    public R<InstitutionOptionsVO> options() {
+        return R.ok(adminInstitutionService.getInstitutionOptions());
     }
 
     @Operation(summary = "修改机构")

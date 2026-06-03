@@ -11,8 +11,10 @@
         WHERE ip.status = 1
           AND ip.min_age &lt;= #{age}
           AND ip.max_age &gt;= #{age}
+          <if test="amount != null and amount &gt; 0">
           AND ip.min_amount &lt;= #{amount}
           AND ip.max_amount &gt;= #{amount}
+          </if>
         ORDER BY ip.weight DESC, ip.priority ASC
     </select>
 

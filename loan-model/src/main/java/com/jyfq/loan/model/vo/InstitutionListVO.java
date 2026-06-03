@@ -18,6 +18,8 @@ public class InstitutionListVO implements Serializable {
     private String merchantAlias;
     private String productName;
     private String merchantType;
+    private String channelType;
+    private String businessOwner;
     private String openCities;
     private Integer status;
     private String statusDesc;

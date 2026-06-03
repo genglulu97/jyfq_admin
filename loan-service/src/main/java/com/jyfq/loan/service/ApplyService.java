@@ -20,12 +20,20 @@ public interface ApplyService {
     PreCheckResult competitivePreCheck(StandardApplyData data);
 
     /**
+     * 8-digit masked mobile pre-check. Downstream returns a mobile MD5 list;
+     * this method only passes when the current plain mobile MD5 is not in that list.
+     */
+    PreCheckResult mobileEightPreCheck(StandardApplyData data, String requestId, String mobileEight);
+
+    /**
      * Find the latest pre-check-passed local order for this applicant.
      *
      * @param data standardized application data
      * @return latest matched local order, null if none
      */
     CollisionRecord findLatestMatchedCollisionRecord(StandardApplyData data);
+
+    CollisionRecord findMatchedCollisionRecord(StandardApplyData data, String collisionNo);
 
     /**
      * 正式进件：将数据推送到指定的机构
